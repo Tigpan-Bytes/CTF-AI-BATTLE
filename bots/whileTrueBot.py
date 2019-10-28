@@ -6,4 +6,7 @@ class AI:
         self.hiveCount = 0
         
     def do_turn(self, position):
-        return (position[0] + random.randrange(-1, 2) + 30) % 30, (position[1] + random.randrange(-1, 2) + 30) % 30
+        i = 0
+        while True:
+            i = (i + 1) % 1000
+        return position

@@ -32,10 +32,54 @@ def time_limit(msg='', seconds=TIMEOUT):
     try:
         yield
     except KeyboardInterrupt:
-        raise TimeoutException(msg)
+        raise TimeoutException("Timed out for operation {}".format(msg))
     finally:
         # if the action ends in specified time, timer is canceled
         timer.cancel()
+
+class Tile:
+    def __init__(self, position):
+        self.position = position
+        self.state = random.getrandbits(1)
+        self.nextState = False
+
+    def set_next(self, neighbors):
+        alive_count = 0
+        for cell in neighbors:
+            if cell is None:
+                continue
+            alive_count += cell.state
+        if self.state:
+            self.nextState = 1 < alive_count < 4
+        else:
+            self.nextState = alive_count == 3
+
+
+def get_2d_tile_array(rows, cols):
+    returnable = [[Tile((x, y)) for x in range(rows)] for y in range(cols)]
+    return returnable
+
+
+def get_2d_element(arr, position):
+    if position[0] < 0 or position[1] < 0:
+        return None
+    if position[0] >= len(arr) or position[1] >= len(arr[0]):
+        return None
+
+    return arr[position[0]][position[1]]
+
+
+def get_neighbors(arr, pos):
+    return [get_2d_element(arr, (pos[0] - 1, pos[1] - 1)), get_2d_element(arr, (pos[0] - 1, pos[1])),
+            get_2d_element(arr, (pos[0] - 1, pos[1] + 1)),
+            get_2d_element(arr, (pos[0], pos[1] - 1)), get_2d_element(arr, (pos[0], pos[1] + 1)),
+            get_2d_element(arr, (pos[0] + 1, pos[1] - 1)), get_2d_element(arr, (pos[0] + 1, pos[1])),
+            get_2d_element(arr, (pos[0] + 1, pos[1] + 1))]
+
+
+def rebuild_array():
+    w, h = pygame.display.get_surface().get_size()
+    return get_2d_tile_array(math.floor(h / CELL_SIZE), math.floor(w / CELL_SIZE))
 
 
 def main():
@@ -43,6 +87,7 @@ def main():
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
     screen = pygame.display.set_mode((600, 600), pygame.RESIZABLE)
+    arr = rebuild_array()
 
     bot_path = './bots'
 
@@ -53,6 +98,19 @@ def main():
 
     while True:
         screen.fill(WHITE)
+
+        for x in range(len(arr)):
+            for y in range(len(arr[0])):
+                arr[x][y].set_next(get_neighbors(arr, (x, y)))
+
+        for x in range(len(arr)):
+            for y in range(len(arr[0])):
+                arr[x][y].state = arr[x][y].nextState
+
+        for x in range(len(arr)):
+            for y in range(len(arr[0])):
+                pygame.draw.rect(screen, BLACK if arr[x][y].state else WHITE,
+                                 (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1))
 
         for i in range(len(bots)):
             try:
@@ -72,6 +130,7 @@ def main():
                 sys.exit()
             if event.type == pygame.VIDEORESIZE:
                 surface = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                arr = rebuild_array()
 
 
 # run the main function only if this module is executed as the main script
