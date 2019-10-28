@@ -1,14 +1,19 @@
 # import the pygame module, so you can use it
-import pygame, sys
+import pygame
+import sys
+
 from os import listdir
 from os.path import isfile, join
 import importlib
+
 import random
 import math
 
-from .bots import randomBot
-
 CELL_SIZE = 20
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
 
 class Tile:
     def __init__(self, position):
@@ -63,17 +68,9 @@ def main():
     bot_path = './bots'
 
     bot_imports = [f for f in listdir(bot_path) if isfile(join(bot_path, f))]
-    #bot_imports.remove('__init__.py')
-    bot_ais = [__import__('bots.' + f[0:-3]) for f in bot_imports]
-    print(bot_ais)
-    dir(bot_ais)
-    bots = [((random.randrange(0, 30), random.randrange(0, 30)), ai.AI()) for ai in bot_ais]
-    import <'.bots.randomBot'>
-     
-    # define a variable to control the main loop
-    WHITE=(255,255,255)
-    BLACK=(0,0,0)
-    RED=(255,0,0)
+    bot_modules = [importlib.import_module('bots.' + f[0:-3]) for f in bot_imports]
+    bots = [(ai.AI()) for ai in bot_modules]
+    bots_position = [(random.randrange(0, 20), random.randrange(0, 20)) for _ in bot_modules]
      
     # main loop
     while True:
@@ -93,9 +90,9 @@ def main():
             for y in range(len(arr[0])):
                 pygame.draw.rect(screen, BLACK if arr[x][y].state else WHITE, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1))
                 
-        for bot in bots:
-            bot[0] = bot[1].do_turn(bot[0])
-            pygame.draw.rect(screen, RED, (bot[0][0] * CELL_SIZE, bot[0][1] * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1))
+        for i in range(len(bots)):
+            bots_position[i] = bots[i].do_turn(bots_position[i])
+            pygame.draw.rect(screen, RED, (bots_position[i][0] * CELL_SIZE, bots_position[i][1] * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1))
     
         pygame.display.update()  
         for event in pygame.event.get():

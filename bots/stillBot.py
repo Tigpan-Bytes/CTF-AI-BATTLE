@@ -5,5 +5,5 @@ class AI:
     def __init__(self):
         self.hiveCount = 0
         
-    def do_turn(position):
+    def do_turn(self, position):
         return position
