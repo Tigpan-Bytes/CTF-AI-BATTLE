@@ -9,4 +9,4 @@ class AI:
         i = 0
         while True:
             i = (i + 1) % 1000
-        return position
+        return (position[0]+1, position[1]+1)

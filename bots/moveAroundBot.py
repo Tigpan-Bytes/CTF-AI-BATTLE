@@ -12,17 +12,17 @@ class AI:
             if returnable[1] == 29:
                 self.state = 1
             return returnable
-        if self.state == 1:
+        elif self.state == 1:
             returnable = position[0] + 1, position[1]
             if returnable[0] == 29:
                 self.state = 2
             return returnable
-        if self.state == 2:
+        elif self.state == 2:
             returnable = position[0], position[1] - 1
             if returnable[1] == 0:
                 self.state = 3
             return returnable
-        if self.state == 3:
+        else:
             returnable = position[0] - 1, position[1]
             if returnable[0] == 0:
                 self.state = 0
