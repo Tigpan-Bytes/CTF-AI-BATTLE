@@ -18,13 +18,67 @@ BOARD = (200, 200, 200)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
-TIMEOUT = 0.2
-X_SIZE = 30
-Y_SIZE = 30
+TIMEOUT = 0.1
+X_SIZE = 50
+Y_SIZE = 50
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
         self.msg = msg
+        
+class Bot():
+    def __init__(self, name, ai):
+        self.name = name
+        self.ai = ai
+        self.position = (random.randrange(0, 20), random.randrange(0, 20))
+        
+class Board():
+    def __init__(self, w, h, bots):
+        self.grid = create_grid(w, h)
+        self.resize_board(600, 600)
+        self.bots = bots
+        
+    def resize_board(self, w, h):
+        self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
+        self.cell_size = h / Y_SIZE
+        self.x_plus = (w - (self.cell_size * X_SIZE)) / 2
+        
+    def render(self):
+        self.screen.fill(WHITE)
+        pygame.draw.rect(self.screen, BOARD, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
+        
+        for x in range(X_SIZE):
+            for y in range(Y_SIZE):
+                if not self.grid[x][y]:
+                    pygame.draw.rect(self.screen, BLACK, (x * self.cell_size + self.x_plus, y * self.cell_size,
+                                                          self.cell_size + 0.5, self.cell_size + 0.5))
+                    
+    def do_bots(self):
+        bot_length = len(self.bots)
+        i = 0
+        while i < bot_length:
+            try:
+                with timeout_limit():
+                    self.bots[i].position = self.bots[i].ai.do_turn(self.bots[i].position)
+            except TimeoutException as e:
+                print('Bot index [' + str(i) + '] ('+self.bots[i].name+') exceeded timelimit, no actions taken.')
+            except Exception as e:
+                print('Bot index [' + str(i) + '] ('+self.bots[i].name+') did a naughty. Terminating it.')
+                
+                self.bots.pop(i)
+
+                i = i - 1
+                bot_length = bot_length - 1
+                
+            pygame.draw.rect(self.screen, RED, (self.bots[i].position[0] * self.cell_size + self.x_plus,
+                                                self.bots[i].position[1] * self.cell_size,
+                                                self.cell_size - 1, self.cell_size - 1))
+            
+            i = i + 1
+                    
+    def update(self):
+        self.render()
+        self.do_bots()
 
 @contextmanager
 def timeout_limit(seconds=TIMEOUT):
@@ -39,56 +93,41 @@ def timeout_limit(seconds=TIMEOUT):
         timer.cancel()
 
 def create_grid(w, h):
-    return [[random.getrandbits(2) == 0 for x in range(w)] for y in range(h)]
+    grid = [[random.randrange(0, 100) < 55 for y in range(h)] for x in range(w)]
+    for _ in range(5):
+        grid_count = [[random.randrange(0, 100) < 45 for y in range(h)] for x in range(w)]
+        for x in range(w):
+            for y in range(h):
+                count = -1 if grid[x][y] else 0;
+                for x_plus in [-1, 0, 1]:
+                    for y_plus in [-1, 0, 1]:
+                        if x + x_plus >= 0 and y + y_plus >= 0 and x + x_plus < w and y + y_plus < h:
+                            count += 1 if grid[x + x_plus][y + y_plus] else 0
+                grid_count[x][y] = count
+        for x in range(w):
+            for y in range(h):
+                if grid[x][y]:
+                    grid[x][y] = grid_count[x][y] >= 4
+                else:
+                    grid[x][y] = grid_count[x][y] >= 5
+    return grid
 
-def resize_board(w, h):
-    return math.floor(h / Y_SIZE)
+def get_bots():
+    bot_path = './bots'
+
+    bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
+    bot_ais = [importlib.import_module('bots.' + f).AI(X_SIZE, Y_SIZE) for f in bot_names]
+    
+    return [Bot(n, a) for n, a in zip(bot_names, bot_ais)]
 
 def main():
     pygame.init()
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
-    screen = pygame.display.set_mode((600, 600), pygame.RESIZABLE)
-    cell_size = resize_board(600, 600)
-    grid = create_grid(X_SIZE, Y_SIZE)
-
-    bot_path = './bots'
-
-    bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
-    bot_modules = [importlib.import_module('bots.' + f) for f in bot_names]
-    bots = [ai.AI() for ai in bot_modules]
-    bots_position = [(random.randrange(0, 20), random.randrange(0, 20)) for _ in bot_modules]
+    board = Board(X_SIZE, Y_SIZE, get_bots())
 
     while True:
-        screen.fill(WHITE)
-        pygame.draw.rect(screen, BOARD, (0, 0, X_SIZE * cell_size, Y_SIZE * cell_size))
-        
-        for x in range(X_SIZE):
-            for y in range(Y_SIZE):
-                if grid[x][y]:
-                    pygame.draw.rect(screen, BLACK, (x * cell_size, y * cell_size, cell_size - 1, cell_size - 1))
-        
-        bot_length = len(bots)
-        i = 0
-        while i < bot_length:
-            try:
-                with timeout_limit():
-                    bots_position[i] = bots[i].do_turn(bots_position[i])
-            except TimeoutException as e:
-                print('Bot index [' + str(i) + '] ('+bot_names[i]+') exceeded timelimit, no actions taken.')
-            except Exception as e:
-                print('Bot index [' + str(i) + '] ('+bot_names[i]+') did a naughty. Terminating it.')
-                
-                bots.pop(i)
-                bot_names.pop(i)
-                bots_position.pop(i)
-                
-                i = i - 1
-                bot_length = bot_length-1
-                
-            pygame.draw.rect(screen, RED, (bots_position[i][0] * cell_size, bots_position[i][1] * cell_size, cell_size - 1, cell_size - 1))
-            
-            i = i + 1
+        board.update()
 
         pygame.display.update()
         for event in pygame.event.get():
@@ -96,8 +135,7 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.VIDEORESIZE:
-                surface = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                cell_size = resize_board(event.w, event.h)
+                board.resize_board(event.w, event.h)
 
 
 # run the main function only if this module is executed as the main script
