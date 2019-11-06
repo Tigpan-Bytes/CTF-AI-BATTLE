@@ -100,15 +100,21 @@ def insert_grid(grid, quarter, w, h, x_index, y_index):
 
 def create_grid(w, h):
     grid_quarter = [[False for y in range(math.floor(h / 2))] for x in range(math.floor(w / 2))]
-    grid_quarter_pattern = [[False,False,False,False,False,False],
-                            [True, True, True, False, True, False],
-                            [True, False, True, True, True, False],
-                            [False,False,True, True, False,False],
-                            [False, True, True, True, False, True],
-                            [False, True,False, True, True, True]]
+    grid_quarter_pattern = [[0,0,0,0,0,0,0,0,0,0,0,0],
+                            [1,1,1,1,1,1,1,1,1,1,0,0],
+                            [1,1,1,1,1,1,1,1,1,1,0,0],
+                            [1,1,1,1,1,1,1,0,1,1,0,0],
+                            [1,1,1,1,1,1,1,0,1,1,0,0],
+                            [0,0,0,0,1,1,1,0,0,0,0,0],
+                            [0,0,0,0,0,1,1,1,0,0,0,0],
+                            [0,0,1,1,0,1,1,1,1,1,1,1],
+                            [0,0,1,1,0,1,1,1,1,1,1,1],
+                            [0,0,1,1,1,1,1,1,1,1,1,1],
+                            [0,0,1,1,1,1,1,1,1,1,1,1],
+                            [0,0,0,0,0,0,0,0,0,0,0,0]]
     for x in range(math.floor(w / 2)):
         for y in range(math.floor(h / 2)):
-            if grid_quarter_pattern[math.floor(y / 5 - h / 24) % 6][math.floor(x / 5) % 6]:
+            if grid_quarter_pattern[math.floor(y / (h / 24)) % 12][math.floor(x / (w / 24)) % 12] == 1:
                 grid_quarter[x][y] = True
     grid_quarter = randomize_grid(grid_quarter, math.floor(w / 2), math.floor(h / 2))
 
