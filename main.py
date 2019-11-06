@@ -19,8 +19,8 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
 TIMEOUT = 0.1
-X_SIZE = 50
-Y_SIZE = 50
+X_SIZE = 60
+Y_SIZE = 60
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
@@ -51,7 +51,7 @@ class Board():
             for y in range(Y_SIZE):
                 if not self.grid[x][y]:
                     pygame.draw.rect(self.screen, BLACK, (x * self.cell_size + self.x_plus, y * self.cell_size,
-                                                          self.cell_size + 0.5, self.cell_size + 0.5))
+                                                          self.cell_size + 1, self.cell_size + 1))
                     
     def do_bots(self):
         bot_length = len(self.bots)
@@ -92,8 +92,39 @@ def timeout_limit(seconds=TIMEOUT):
         # if the action ends in specified time, timer is canceled
         timer.cancel()
 
+def insert_grid(grid, quarter, w, h, x_index, y_index):
+    for x in range(math.floor(w / 2)):
+        for y in range(math.floor(h / 2)):
+            grid[(x_index + x) % w][(y_index + y) % h] = quarter[x][y]
+    return grid
+
 def create_grid(w, h):
-    grid = [[random.randrange(0, 100) < 55 for y in range(h)] for x in range(w)]
+    grid_quarter = [[False for y in range(math.floor(h / 2))] for x in range(math.floor(w / 2))]
+    grid_quarter_pattern = [[False,False,False,False,False,False],
+                            [True, True, True, False, True, False],
+                            [True, False, True, True, True, False],
+                            [False,False,True, True, False,False],
+                            [False, True, True, True, False, True],
+                            [False, True,False, True, True, True]]
+    for x in range(math.floor(w / 2)):
+        for y in range(math.floor(h / 2)):
+            if grid_quarter_pattern[math.floor(y / 5 - h / 24) % 6][math.floor(x / 5) % 6]:
+                grid_quarter[x][y] = True
+    grid_quarter = randomize_grid(grid_quarter, math.floor(w / 2), math.floor(h / 2))
+
+    grid = [[False for y in range(h)] for x in range(w)]
+    grid = insert_grid(grid, grid_quarter, w, h, 0, 0)
+    grid = insert_grid(grid, grid_quarter, w, h, math.floor(w / 2), math.floor(h / 4))
+    grid = insert_grid(grid, grid_quarter, w, h, 0, math.floor(h / 2))
+    grid = insert_grid(grid, grid_quarter, w, h, math.floor(w / 2), math.floor((3 * h) / 4))
+    return grid
+
+def randomize_grid(grid, w, h):
+    for x in range(w):
+        for y in range(h):
+            if random.randrange(0, 100) < 25:
+                grid[x][y] = not grid[x][y]
+
     for _ in range(5):
         grid_count = [[random.randrange(0, 100) < 45 for y in range(h)] for x in range(w)]
         for x in range(w):
@@ -103,6 +134,11 @@ def create_grid(w, h):
                     for y_plus in [-1, 0, 1]:
                         if x + x_plus >= 0 and y + y_plus >= 0 and x + x_plus < w and y + y_plus < h:
                             count += 1 if grid[x + x_plus][y + y_plus] else 0
+                        else:
+                            if x + x_plus < 0:
+                                count += 1 if grid[w - 1][(y + y_plus - math.floor(h / 2)) % h] else 0
+                            else:
+                                count += 1 if grid[0][(y + y_plus + math.floor(h / 2)) % h] else 0
                 grid_count[x][y] = count
         for x in range(w):
             for y in range(h):
