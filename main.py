@@ -31,7 +31,7 @@ class Bot():
         self.name = name
         self.ai = ai
         self.position = (random.randrange(0, 20), random.randrange(0, 20))
-        
+
 class Board():
     def __init__(self, w, h, bots):
         self.grid = create_grid(w, h)
@@ -99,24 +99,26 @@ def insert_grid(grid, quarter, w, h, x_index, y_index):
     return grid
 
 def create_grid(w, h):
-    grid_quarter = [[False for y in range(math.floor(h / 2))] for x in range(math.floor(w / 2))]
-    grid_quarter_pattern = [[0,0,0,0,0,0,0,0,0,0,0,0],
-                            [1,1,1,1,1,1,1,1,1,1,0,0],
-                            [1,1,1,1,1,1,1,1,1,1,0,0],
-                            [1,1,1,1,1,1,1,0,1,1,0,0],
-                            [1,1,1,1,1,1,1,0,1,1,0,0],
-                            [0,0,0,0,1,1,1,0,0,0,0,0],
-                            [0,0,0,0,0,1,1,1,0,0,0,0],
-                            [0,0,1,1,0,1,1,1,1,1,1,1],
-                            [0,0,1,1,0,1,1,1,1,1,1,1],
-                            [0,0,1,1,1,1,1,1,1,1,1,1],
-                            [0,0,1,1,1,1,1,1,1,1,1,1],
-                            [0,0,0,0,0,0,0,0,0,0,0,0]]
+    grid_template = [[0 for y in range(math.floor(h / 2))] for x in range(math.floor(w / 2))]
+    grid_quarter_pattern = [[3,3,3,3,3,3,3,3,3,3,3,3],
+                            [0,2,0,1,3,0,1,2,1,0,0,3],
+                            [2,1,2,2,3,1,2,1,2,1,1,3],
+                            [2,0,1,1,1,2,3,0,1,2,2,3],
+                            [0,3,0,1,2,0,3,3,0,0,0,3],
+                            [3,3,3,0,1,2,1,3,3,0,0,3],
+                            [3,0,0,3,3,1,2,1,0,3,3,3],
+                            [3,0,0,0,3,3,0,2,1,0,3,0],
+                            [3,5,2,1,0,3,2,1,1,1,0,2],
+                            [3,1,1,2,1,2,1,3,2,2,1,2],
+                            [3,0,0,1,2,1,0,3,1,0,2,0],
+                            [3,3,3,3,3,3,3,3,3,3,3,3]]
+    if random.getrandbits(1) == 1:
+        grid_quarter_pattern.reverse()
+
     for x in range(math.floor(w / 2)):
         for y in range(math.floor(h / 2)):
-            if grid_quarter_pattern[math.floor(y / (h / 24)) % 12][math.floor(x / (w / 24)) % 12] == 1:
-                grid_quarter[x][y] = True
-    grid_quarter = randomize_grid(grid_quarter, math.floor(w / 2), math.floor(h / 2))
+            grid_template[x][y] = grid_quarter_pattern[math.floor(y / (h / 24)) % 12][math.floor(x / (w / 24)) % 12]
+    grid_quarter = randomize_grid(grid_template, math.floor(w / 2), math.floor(h / 2))
 
     grid = [[False for y in range(h)] for x in range(w)]
     grid = insert_grid(grid, grid_quarter, w, h, 0, 0)
@@ -125,13 +127,20 @@ def create_grid(w, h):
     grid = insert_grid(grid, grid_quarter, w, h, math.floor(w / 2), math.floor((3 * h) / 4))
     return grid
 
-def randomize_grid(grid, w, h):
+def randomize_grid(grid_template, w, h):
+    grid = [[0 for y in range(h)] for x in range(w)]
     for x in range(w):
         for y in range(h):
-            if random.randrange(0, 100) < 25:
-                grid[x][y] = not grid[x][y]
+            if grid_template[x][y] == 2:
+                grid[x][y] = random.randrange(0, 100) < 90
+            elif grid_template[x][y] == 3:
+                grid[x][y] = random.randrange(0, 100) < 10
+            elif random.randrange(0, 100) < 25:
+                grid[x][y] = not grid_template[x][y]
+            else:
+                grid[x][y] = grid_template[x][y]
 
-    for _ in range(5):
+    for _ in range(4):
         grid_count = [[random.randrange(0, 100) < 45 for y in range(h)] for x in range(w)]
         for x in range(w):
             for y in range(h):
