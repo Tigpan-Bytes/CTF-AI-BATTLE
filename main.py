@@ -115,6 +115,7 @@ def insert_grid(grid, part, x_portion, y_portion, w, h, x_index, y_index):
 def create_grid(w, h):
     x_portion = 2
     y_portion = 2
+<<<<<<< Updated upstream
     grid_partial_pattern = [[3, 3, 3, 3, 0, 2, 1, 1, 3, 3, 3, 3],
                             [0, 2, 0, 1, 3, 1, 1, 2, 1, 0, 0, 3],
                             [2, 1, 2, 1, 3, 1, 2, 1, 2, 1, 1, 3],
@@ -136,6 +137,31 @@ def create_grid(w, h):
         for y in range(math.floor(h / y_portion)):
             grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (y_portion * 12))) % 12][math.floor(x / (w / (x_portion * 12))) % 12]
     grid_part = randomize_grid(grid_template, math.floor(w / x_portion), math.floor(h / y_portion))
+=======
+    grid_partial_pattern = [[3, 3, 3, 3, 0, 2, 1, 0, 3, 3, 3, 3],
+                            [0, 2, 0, 0, 3, 1, 1, 0, 3, 0, 0, 3],
+                            [2, 1, 2, 1, 3, 1, 2, 2, 2, 1, 1, 3],
+                            [2, 3, 2, 1, 1, 2, 1, 1, 1, 2, 1, 3],
+                            [0, 3, 3, 2, 2, 0, 3, 3, 1,'B',1, 3],
+                            [3, 3, 3, 3, 1, 2, 1, 3, 3, 1, 1, 3],
+                            [3, 1, 1, 3, 3, 1, 2, 1, 3, 3, 3, 3],
+                            [3, 1,'A',1, 3, 3, 0, 2, 2, 3, 3, 0],
+                            [3, 1, 2, 1, 1, 1, 2, 1, 1, 2, 3, 2],
+                            [3, 1, 1, 2, 2, 2, 1, 3, 1, 2, 1, 2],
+                            [3, 0, 0, 3, 0, 1, 1, 3, 0, 0, 2, 0],
+                            [3, 3, 3, 3, 0, 1, 2, 0, 3, 3, 3, 3]]
+    if random.getrandbits(1) == 1:
+        grid_partial_pattern.reverse()
+
+    grid_part = None
+    while not verify_grid(grid_part, math.floor(w / x_portion), math.floor(h / y_portion)):
+        grid_template = [[0 for y in range(math.floor(h / y_portion))] for x in range(math.floor(w / x_portion))]
+
+        for x in range(math.floor(w / x_portion)):
+            for y in range(math.floor(h / y_portion)):
+                grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (y_portion * 12))) % 12][math.floor(x / (w / (x_portion * 12))) % 12]
+        grid_part = randomize_grid(grid_template, math.floor(w / x_portion), math.floor(h / y_portion))
+>>>>>>> Stashed changes
 
     grid = [[None for y in range(h)] for x in range(w)]
     # grid = insert_grid(grid, grid_part, portion, w, h, 0, 0)
@@ -153,6 +179,61 @@ def create_grid(w, h):
     return grid
 
 
+<<<<<<< Updated upstream
+=======
+def verify_grid(grid, w, h):
+    if grid == None:
+        return False
+    
+    grid_walked = [[False for y in range(h)] for x in range(w)]
+    position = [-1,-1]
+    for x in range(w):
+        for y in range(h):
+            if grid[x][y].walkable:
+                position = [x, y]
+                break
+        if position[0] != -1:
+            break
+    positions = [position]
+    grid_walked[position[0]][position[1]] = True
+    
+    while len(positions) > 0:
+        pos = positions.pop(0)
+        if pos[0] > 0 and not grid_walked[pos[0] - 1][pos[1]] and grid[pos[0] - 1][pos[1]].walkable:
+            grid_walked[pos[0] - 1][pos[1]] = True
+            positions.append([pos[0] - 1, pos[1]])
+        if pos[0] < w - 1 and not grid_walked[pos[0] + 1][pos[1]] and grid[pos[0] + 1][pos[1]].walkable:
+            grid_walked[pos[0] + 1][pos[1]] = True
+            positions.append([pos[0] + 1, pos[1]])
+        if pos[1] > 0 and not grid_walked[pos[0]][pos[1] - 1] and grid[pos[0]][pos[1] - 1].walkable:
+            grid_walked[pos[0]][pos[1] - 1] = True
+            positions.append([pos[0], pos[1] - 1])
+        if pos[1] < h - 1 and not grid_walked[pos[0]][pos[1] + 1] and grid[pos[0]][pos[1] + 1].walkable:
+            grid_walked[pos[0]][pos[1] + 1] = True
+            positions.append([pos[0], pos[1] + 1])
+            
+    reached_top = False
+    reached_left = False
+    reached_right = False
+    reached_bottom = False
+    hive_count = 0
+    
+    for x in range(w):
+        for y in range(h):
+            if x == 0 and grid_walked[x][y]:
+                reached_left = True
+            if x == w - 1 and grid_walked[x][y]:
+                reached_right = True
+            if y == 0 and grid_walked[x][y]:
+                reached_top = True
+            if y == h - 1 and grid_walked[x][y]:
+                reached_bottom = True
+            if grid_walked[x][y] and grid[x][y].hive:
+                hive_count = hive_count + 1
+                
+    return reached_top and reached_left and reached_right and reached_bottom and hive_count == 2
+
+>>>>>>> Stashed changes
 def randomize_grid(grid_template, w, h):
     grid = [[Tile(False) for y in range(h)] for x in range(w)]
     grid_a = []
@@ -161,7 +242,11 @@ def randomize_grid(grid_template, w, h):
         for y in range(h):
             if grid_template[x][y] == 'A':
                 grid_a.append([x, y])
+<<<<<<< Updated upstream
                 grid[x][y].walkable = random.randrange(0, 100) < 65
+=======
+                grid[x][y].walkable = random.randrange(0, 100) < 75
+>>>>>>> Stashed changes
             elif grid_template[x][y] == 'B':
                 grid_b.append([x, y])
                 grid[x][y].walkable = random.randrange(0, 100) < 65
@@ -173,6 +258,7 @@ def randomize_grid(grid_template, w, h):
                 grid[x][y].walkable = not grid_template[x][y]
             else:
                 grid[x][y].walkable = grid_template[x][y]
+<<<<<<< Updated upstream
 
     a_index = grid_a[random.randint(0, len(grid_a) - 1)]
     b_index = grid_b[random.randint(0, len(grid_b) - 1)]
@@ -180,6 +266,15 @@ def randomize_grid(grid_template, w, h):
     grid[a_index[0]][a_index[1]].hive = True
     grid[a_index[0]][a_index[1]].walkable = True
 
+=======
+
+    a_index = grid_a[random.randint(0, len(grid_a) - 1)]
+    b_index = grid_b[random.randint(0, len(grid_b) - 1)]
+
+    grid[a_index[0]][a_index[1]].hive = True
+    grid[a_index[0]][a_index[1]].walkable = True
+
+>>>>>>> Stashed changes
     grid[b_index[0]][b_index[1]].hive = True
     grid[b_index[0]][b_index[1]].walkable = True
 
