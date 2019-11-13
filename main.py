@@ -20,9 +20,12 @@ RED = (255, 0, 0)
 GREEN = (0, 90, 160)
 
 TIMEOUT = 0.1
-X_SIZE = 90
-Y_SIZE = 90
 
+X_SIZE = 32
+Y_SIZE = 32
+
+X_GRIDS = 3
+Y_GRIDS = 3
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
@@ -105,84 +108,55 @@ def timeout_limit(seconds=TIMEOUT):
         timer.cancel()
 
 
-def insert_grid(grid, part, x_portion, y_portion, w, h, x_index, y_index):
-    for x in range(math.floor(w / x_portion)):
-        for y in range(math.floor(h / y_portion)):
+def insert_grid(grid, part, X_GRIDS, Y_GRIDS, w, h, x_index, y_index):
+    for x in range(math.floor(w / X_GRIDS)):
+        for y in range(math.floor(h / Y_GRIDS)):
             grid[(x_index + x + w) % w][(y_index + y + h) % h] = part[x][y]
     return grid
 
 
 def create_grid(w, h):
-    x_portion = 3
-    y_portion = 3
-    grid_partial_pattern_temp = [[3, 3, 3, 3, 0, 2, 1, 1, 3, 3, 3, 3],
-                            [0, 2, 0, 1, 3, 1, 1, 2, 1, 0, 0, 3],
-                            [2, 1, 2, 1, 3, 1, 2, 1, 2, 1, 1, 3],
-                            [2, 0, 2, 1, 1, 2, 0, 3, 1, 'B', 1, 3],
-                            [0, 3, 0, 1, 2, 0, 3, 3, 0, 1, 1, 3],
-                            [3, 3, 3, 0, 1, 2, 1, 3, 3, 3, 1, 3],
-                            [3, 1, 3, 3, 3, 1, 2, 1, 0, 3, 3, 3],
-                            [3, 1, 1, 0, 3, 3, 0, 2, 1, 0, 3, 0],
-                            [3, 1, 'A', 1, 3, 0, 2, 1, 1, 2, 0, 2],
-                            [3, 1, 1, 2, 1, 2, 1, 3, 1, 2, 1, 2],
-                            [3, 0, 0, 1, 2, 1, 1, 3, 1, 0, 2, 0],
-                            [3, 3, 3, 3, 1, 1, 2, 0, 3, 3, 3, 3]]
+    grid_partial_pattern = [[2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1],
+                            [0, 2, 2, 0, 3, 0, 1, 1, 3, 3, 3, 3],
+                            [3, 0, 1, 2, 2, 1, 2, 2, 0, 2, 2, 3],
+                            [3, 2, 1, 3, 1, 2, 3, 1, 2, 2, 1, 3],
+                            [3, 2, 1, 0, 3, 2, 0, 3, 3, 3, 3, 3],
+                            [3, 2,'B',1, 3, 2, 1, 3, 0, 2, 1, 3],
+                            [3, 1, 2, 0, 3, 1, 2, 3, 1,'A',2, 3],
+                            [3, 3, 3, 3, 3, 0, 2, 3, 0, 1, 2, 3],
+                            [3, 1, 2, 2, 1, 3, 2, 1, 3, 1, 2, 3],
+                            [3, 2, 3, 0, 2, 2, 1, 2, 2, 1, 0, 3],
+                            [1, 2, 3, 0, 3, 1, 0, 3, 0, 2, 2, 0],
+                            [2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2]]
+    #if random.getrandbits(1) == 1:
+    #    grid_partial_pattern.reverse()
+
+    grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
+
+    for x in range(math.floor(w / X_GRIDS)):
+        for y in range(math.floor(h / Y_GRIDS)):
+            grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][math.floor(x / (w / (X_GRIDS * 12))) % 12]
+    grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
     
-    grid_partial_pattern = [[3, 3, 3, 3, 3, 3, 3, 0, 2, 2, 0, 3],
-                            [3, 0, 1, 1, 1, 1, 3, 3, 0, 1, 2, 3],
-                            [3, 0, 1, 'B', 1, 3, 3, 0, 2, 2, 0, 3],
-                            [3, 1, 2, 1, 0, 3, 0, 1, 1, 1, 1, 3],
-                            [1, 2, 1, 3, 3, 3, 1, 2, 1, 3, 3, 0],
-                            [1, 1, 2, 0, 3, 1, 2, 0, 2, 1, 1, 2],
-                            [2, 1, 1, 2, 0, 2, 1, 3, 0, 2, 1, 1],
-                            [0, 3, 3, 1, 2, 1, 3, 3, 3, 1, 2, 1],
-                            [3, 1, 1, 1, 1, 0, 3, 0, 1, 2, 1, 3],
-                            [3, 0, 2, 2, 0, 3, 3, 1, 'A', 1, 0, 3],
-                            [3, 2, 1, 0, 3, 3, 1, 1, 1, 1, 0, 3],
-                            [3, 0, 2, 2, 0, 3, 3, 3, 3, 3, 3, 3]]
     if random.getrandbits(1) == 1:
         grid_partial_pattern.reverse()
 
-    grid_template = [[0 for y in range(math.floor(h / y_portion))] for x in range(math.floor(w / x_portion))]
-
-    for x in range(math.floor(w / x_portion)):
-        for y in range(math.floor(h / y_portion)):
-            grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (y_portion * 12))) % 12][math.floor(x / (w / (x_portion * 12))) % 12]
-    grid_part = randomize_grid(grid_template, math.floor(w / x_portion), math.floor(h / y_portion))
-    grid_partial_pattern = [[3, 3, 3, 3, 0, 2, 1, 0, 3, 3, 3, 3],
-                            [0, 2, 0, 0, 3, 1, 1, 0, 3, 0, 0, 3],
-                            [2, 1, 2, 1, 3, 1, 2, 2, 2, 1, 1, 3],
-                            [2, 3, 2, 1, 1, 2, 1, 1, 1, 2, 1, 3],
-                            [0, 3, 3, 2, 2, 0, 3, 3, 1,'B',1, 3],
-                            [3, 3, 3, 3, 1, 2, 1, 3, 3, 1, 1, 3],
-                            [3, 1, 1, 3, 3, 1, 2, 1, 3, 3, 3, 3],
-                            [3, 1,'A',1, 3, 3, 0, 2, 2, 3, 3, 0],
-                            [3, 1, 2, 1, 1, 1, 2, 1, 1, 2, 3, 2],
-                            [3, 1, 1, 2, 2, 2, 1, 3, 1, 2, 1, 2],
-                            [3, 0, 0, 3, 0, 1, 1, 3, 0, 0, 2, 0],
-                            [3, 3, 3, 3, 0, 1, 2, 0, 3, 3, 3, 3]]
-    if random.getrandbits(1) == 1:
-        grid_partial_pattern.reverse()
-
+    #checks if the grid is valid
     grid_part = None
-    while not verify_grid(grid_part, math.floor(w / x_portion), math.floor(h / y_portion)):
-        grid_template = [[0 for y in range(math.floor(h / y_portion))] for x in range(math.floor(w / x_portion))]
+    while not verify_grid(grid_part, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS)):
+        grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
 
-        for x in range(math.floor(w / x_portion)):
-            for y in range(math.floor(h / y_portion)):
-                grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (y_portion * 12))) % 12][math.floor(x / (w / (x_portion * 12))) % 12]
-        grid_part = randomize_grid(grid_template, math.floor(w / x_portion), math.floor(h / y_portion))
+        for x in range(math.floor(w / X_GRIDS)):
+            for y in range(math.floor(h / Y_GRIDS)):
+                grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][math.floor(x / (w / (X_GRIDS * 12))) % 12]
+        grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
 
+    #places the grid
     grid = [[None for y in range(h)] for x in range(w)]
-    # grid = insert_grid(grid, grid_part, portion, w, h, 0, 0)
-    # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor(h / (portion * 2)))
-    # grid = insert_grid(grid, grid_part, portion, w, h, 0, math.floor(h / portion))
-    # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor((3 * h) / (portion * 2)))
-    for x in range(x_portion):
-        for y in range(y_portion):
-            # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion) * x, math.floor((h * (y * portion + x)) / (portion * portion)))
-            grid = insert_grid(grid, grid_part, x_portion, y_portion, w, h, math.floor(w / x_portion) * x,
-                               math.floor((h / y_portion)) * y + math.floor((h / y_portion) * (x / 2)))
+    for x in range(X_GRIDS):
+        for y in range(Y_GRIDS):
+            grid = insert_grid(grid, grid_part, X_GRIDS, Y_GRIDS, w, h, math.floor(w / X_GRIDS) * x,
+                               math.floor(h / Y_GRIDS) * y)
     # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor(h / (portion * 2)))
     # grid = insert_grid(grid, grid_part, portion, w, h, 0, math.floor(h / portion))
     # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor((3 * h) / (portion * 2)))
@@ -269,13 +243,6 @@ def randomize_grid(grid_template, w, h):
     grid[a_index[0]][a_index[1]].hive = True
     grid[a_index[0]][a_index[1]].walkable = True
 
-
-    a_index = grid_a[random.randint(0, len(grid_a) - 1)]
-    b_index = grid_b[random.randint(0, len(grid_b) - 1)]
-
-    grid[a_index[0]][a_index[1]].hive = True
-    grid[a_index[0]][a_index[1]].walkable = True
-
     grid[b_index[0]][b_index[1]].hive = True
     grid[b_index[0]][b_index[1]].walkable = True
 
@@ -288,27 +255,10 @@ def randomize_grid(grid_template, w, h):
                 count = -1 if grid[x][y].walkable else 0;
                 for x_plus in [-1, 0, 1]:
                     for y_plus in [-1, 0, 1]:
-                        if 0 <= x + x_plus < w and 0 <= y + y_plus < h:
-                            if grid[x + x_plus][y + y_plus].hive:
-                                count = 10
-                                break
-                            count += 1 if grid[x + x_plus][y + y_plus].walkable else 0
-                        else:
-                            if x + x_plus < 0:
-                                if grid[w - 1][(y + y_plus - math.floor(h / 2)) % h].hive:
-                                    count = 10
-                                    break
-                                count += 1 if grid[w - 1][(y + y_plus - math.floor(h / 2)) % h].walkable else 0
-                            elif x + x_plus >= w:
-                                if grid[0][(y + y_plus - math.floor(h / 2)) % h].hive:
-                                    count = 10
-                                    break
-                                count += 1 if grid[0][(y + y_plus + math.floor(h / 2)) % h].walkable else 0
-                            else:
-                                if grid[x + x_plus][(y + y_plus) % h].hive:
-                                    count = 10
-                                    break
-                                count += 1 if grid[x + x_plus][(y + y_plus) % h].walkable else 0
+                        if grid[(x + x_plus) % w][(y + y_plus) % h].hive:
+                            count = 10
+                            break
+                        count += 1 if grid[(x + x_plus) % w][(y + y_plus) % h].walkable else 0
                 grid_count[x][y] = count
         for x in range(w):
             for y in range(h):
@@ -349,4 +299,6 @@ def main():
 # run the main function only if this module is executed as the main script
 # (if you import this as a module then nothing is executed)
 if __name__ == "__main__":
+    X_SIZE *= X_GRIDS
+    Y_SIZE *= Y_GRIDS
     main()
