@@ -116,20 +116,20 @@ def insert_grid(grid, part, X_GRIDS, Y_GRIDS, w, h, x_index, y_index):
 
 
 def create_grid(w, h):
-    grid_partial_pattern = [[2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1],
-                            [0, 2, 2, 0, 3, 0, 1, 1, 3, 3, 3, 3],
-                            [3, 0, 1, 2, 2, 1, 2, 2, 0, 2, 2, 3],
-                            [3, 2, 1, 3, 1, 2, 3, 1, 2, 2, 1, 3],
-                            [3, 2, 1, 0, 3, 2, 0, 3, 3, 3, 3, 3],
-                            [3, 2,'B',1, 3, 2, 1, 3, 0, 2, 1, 3],
-                            [3, 1, 2, 0, 3, 1, 2, 3, 1,'A',2, 3],
-                            [3, 3, 3, 3, 3, 0, 2, 3, 0, 1, 2, 3],
-                            [3, 1, 2, 2, 1, 3, 2, 1, 3, 1, 2, 3],
-                            [3, 2, 3, 0, 2, 2, 1, 2, 2, 1, 0, 3],
-                            [1, 2, 3, 0, 3, 1, 0, 3, 0, 2, 2, 0],
-                            [2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2]]
-    #if random.getrandbits(1) == 1:
-    #    grid_partial_pattern.reverse()
+    grid_partial_pattern = [[2, 1, 0, 3, 3, 3, 3, 3, 3, 0, 1, 2],
+                            [1, 2, 1, 3, 0, 2, 2, 1, 1, 2, 2, 0],
+                            [3, 0, 2, 2, 2, 1, 0, 2, 2, 1, 0, 3],
+                            [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
+                            [3, 3, 3, 3, 1, 2, 1, 3, 2, 2, 1, 3],
+                            [3, 2, 2, 3, 0, 2, 1, 3, 1,'A',2, 3],
+                            [3, 2,'B',1, 3, 1, 2, 0, 3, 2, 2, 3],
+                            [3, 1, 2, 2, 3, 1, 2, 1, 3, 3, 3, 3],
+                            [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
+                            [3, 0, 1, 2, 2, 0, 1, 2, 2, 2, 0, 3],
+                            [0, 2, 2, 1, 1, 2, 2, 0, 3, 1, 2, 1],
+                            [2, 1, 0, 3, 3, 3, 3, 3, 3, 0, 1, 2]]
+    if random.getrandbits(1) == 1:
+        grid_partial_pattern.reverse()
 
     grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
 
@@ -246,7 +246,7 @@ def randomize_grid(grid_template, w, h):
     grid[b_index[0]][b_index[1]].hive = True
     grid[b_index[0]][b_index[1]].walkable = True
 
-    for _ in range(5):
+    for _ in range(4):
         grid_count = [[10 for y in range(h)] for x in range(w)]
         for x in range(w):
             for y in range(h):
