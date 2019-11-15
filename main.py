@@ -42,7 +42,7 @@ class Bot:
     def __init__(self, name, ai):
         self.name = name
         self.ai = ai
-        self.position = (random.randrange(0, 20), random.randrange(0, 20))
+        self.position = (32, 32)
 
 
 class Board:
@@ -73,7 +73,7 @@ class Board:
         while i < bot_length:
             try:
                 with timeout_limit():
-                    self.bots[i].position = self.bots[i].ai.do_turn(self.bots[i].position)
+                    self.bots[i].position = self.bots[i].ai.do_turn(self.grid, self.bots[i].position)
             except TimeoutException as e:
                 print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
             except Exception as e:
@@ -116,7 +116,7 @@ def insert_grid(grid, part, X_GRIDS, Y_GRIDS, w, h, x_index, y_index):
 
 
 def create_grid(w, h):
-    grid_partial_pattern = [[2, 1, 0, 3, 0, 3, 3, 3, 3, 0, 1, 2],
+    grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
                             [1, 2, 1, 3, 0, 2, 2, 1, 1, 2, 2, 1],
                             [3, 1, 2, 2, 2, 1, 0, 2, 2, 1, 1, 3],
                             [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
@@ -127,7 +127,7 @@ def create_grid(w, h):
                             [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
                             [3, 1, 1, 2, 2, 0, 1, 2, 2, 2, 1, 3],
                             [1, 2, 2, 1, 1, 2, 2, 0, 3, 1, 2, 1],
-                            [2, 1, 0, 3, 3, 3, 3, 0, 3, 0, 1, 2]]
+                            [2, 1, 0, 3, 3, 3, 3, 0, 3, 3, 1, 2]]
 
     if random.getrandbits(1) == 1:
         grid_partial_pattern.reverse()
