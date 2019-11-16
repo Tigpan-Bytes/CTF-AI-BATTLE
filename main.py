@@ -14,8 +14,9 @@ import random
 import math
 
 WHITE = (255, 255, 255)
-BOARD = (200, 200, 200)
-BLACK = (0, 0, 0)
+BOARD = (181,169,154)
+WALL = (15, 15, 15)
+NULL = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 90, 160)
 
@@ -25,7 +26,8 @@ X_SIZE = 32
 Y_SIZE = 32
 
 X_GRIDS = 3
-Y_GRIDS = 3
+Y_GRIDS = 2
+
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
@@ -33,23 +35,31 @@ class TimeoutException(Exception):
 
 
 class Tile:
-    def __init__(self, walkable):
+    def __init__(self, walkable, hive=False, hive_index= -1):
         self.walkable = walkable
-        self.hive = False
+        self.hive = hive
+        self.hive_index = hive_index
 
 
 class Bot:
-    def __init__(self, name, ai):
+    def __init__(self, name, ai, colour):
         self.name = name
+        self.terminated = False
         self.ai = ai
         self.position = (32, 32)
+        self.hive_colour = colour[0]
+        self.bee_colour = colour[1]
+        self.hives = []
+
+    def get(self):
+        return self
 
 
 class Board:
     def __init__(self, w, h, bots):
-        self.grid = create_grid(w, h)
-        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
         self.bots = bots
+        self.grid = self.create_grid(w, h)
+        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
 
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
@@ -58,37 +68,104 @@ class Board:
 
     def render(self):
         self.screen.fill(WHITE)
-        pygame.draw.rect(self.screen, BLACK, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
+        pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
                 if self.grid[x][y].walkable:
-                    pygame.draw.rect(self.screen, GREEN if self.grid[x][y].hive else BOARD,
-                                     (x * self.cell_size + self.x_plus, y * self.cell_size,
-                                      self.cell_size + 1, self.cell_size + 1))
+                    if self.grid[x][y].hive:
+                        if self.grid[x][y].hive_index == -1:
+                            self.grid[x][y].hive = False
+                            pygame.draw.rect(self.screen, BOARD,
+                                             (x * self.cell_size + self.x_plus, y * self.cell_size,
+                                              self.cell_size + 1, self.cell_size + 1))
+                        else:
+                            pygame.draw.rect(self.screen, self.bots[self.grid[x][y].hive_index].hive_colour,
+                                             (x * self.cell_size + self.x_plus - 1, y * self.cell_size - 1,
+                                              self.cell_size + 3, self.cell_size + 3))
+                    else:
+                        pygame.draw.rect(self.screen, BOARD,
+                                         (x * self.cell_size + self.x_plus, y * self.cell_size,
+                                          self.cell_size + 1, self.cell_size + 1))
 
     def do_bots(self):
         bot_length = len(self.bots)
         i = 0
         while i < bot_length:
-            try:
-                with timeout_limit():
-                    self.bots[i].position = self.bots[i].ai.do_turn(self.grid, self.bots[i].position)
-            except TimeoutException as e:
-                print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
-            except Exception as e:
-                print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+            if not self.bots[i].terminated:
+                try:
+                    with timeout_limit():
+                        self.bots[i].position = self.bots[i].ai.do_turn(self.grid, X_SIZE, Y_SIZE, self.bots[i].position)
+                except TimeoutException as e:
+                    print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                except Exception as e:
+                    print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                    self.bots[i].terminated = True
 
-                self.bots.pop(i)
-
-                i = i - 1
-                bot_length = bot_length - 1
-
-            pygame.draw.rect(self.screen, RED, (self.bots[i].position[0] * self.cell_size + self.x_plus,
-                                                self.bots[i].position[1] * self.cell_size,
-                                                self.cell_size, self.cell_size))
+                pygame.draw.rect(self.screen, self.bots[i].bee_colour,
+                                 (self.bots[i].position[0] * self.cell_size + self.x_plus,
+                                  self.bots[i].position[1] * self.cell_size,
+                                  self.cell_size, self.cell_size))
 
             i = i + 1
+
+    def create_grid(self, w, h):
+        grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
+                                [1, 2, 1, 3, 0, 2, 2, 1, 1, 2, 2, 1],
+                                [3, 1, 2, 2, 2, 1, 0, 2, 2, 1, 1, 3],
+                                [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
+                                [0, 3, 3, 3, 1, 2, 0, 3, 2, 2, 1, 3],
+                                [0, 2, 2, 3, 3, 2, 1, 3, 1, 'A', 2, 3],
+                                [3, 2, 'B', 1, 3, 1, 2, 3, 3, 2, 2, 0],
+                                [3, 1, 2, 2, 3, 0, 2, 1, 3, 3, 3, 0],
+                                [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
+                                [3, 1, 1, 2, 2, 0, 1, 2, 2, 2, 1, 3],
+                                [1, 2, 2, 1, 1, 2, 2, 0, 3, 1, 2, 1],
+                                [2, 1, 0, 3, 3, 3, 3, 0, 3, 3, 1, 2]]
+
+        # slight randomization
+        if random.getrandbits(1) == 1:
+            grid_partial_pattern.reverse()
+        if random.getrandbits(1) == 1:
+            # Rotates array 90 degrees
+            grid_partial_pattern = list(zip(*grid_partial_pattern[::-1]))
+
+        grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
+
+        # places the template into the correct format
+        for x in range(math.floor(w / X_GRIDS)):
+            for y in range(math.floor(h / Y_GRIDS)):
+                grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][
+                    math.floor(x / (w / (X_GRIDS * 12))) % 12]
+        grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
+
+        # checks if the grid is valid
+        grid_part = None
+        while not verify_grid(grid_part, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS)):
+            grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
+
+            for x in range(math.floor(w / X_GRIDS)):
+                for y in range(math.floor(h / Y_GRIDS)):
+                    grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][
+                        math.floor(x / (w / (X_GRIDS * 12))) % 12]
+            grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
+
+        # places the grid tile in the main grid
+        grid = [[None for y in range(h)] for x in range(w)]
+        i = 0  # index of bots
+        for column in range(X_GRIDS):
+            for row in range(Y_GRIDS):
+                x_index = math.floor(w / X_GRIDS) * column
+                y_index = math.floor(h / Y_GRIDS) * row
+
+                for x in range(math.floor(w / X_GRIDS)):
+                    for y in range(math.floor(h / Y_GRIDS)):
+                        x_i = (x_index + x + w) % w
+                        y_i = (y_index + y + h) % h
+                        grid[x_i][y_i] = Tile(grid_part[x][y].walkable, grid_part[x][y].hive, i if i < len(self.bots) else -1)
+                i = i + 1
+        print(w * h)
+        return grid
 
     def update(self):
         self.render()
@@ -108,71 +185,12 @@ def timeout_limit(seconds=TIMEOUT):
         timer.cancel()
 
 
-def insert_grid(grid, part, X_GRIDS, Y_GRIDS, w, h, x_index, y_index):
-    for x in range(math.floor(w / X_GRIDS)):
-        for y in range(math.floor(h / Y_GRIDS)):
-            grid[(x_index + x + w) % w][(y_index + y + h) % h] = part[x][y]
-    return grid
-
-
-def create_grid(w, h):
-    grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
-                            [1, 2, 1, 3, 0, 2, 2, 1, 1, 2, 2, 1],
-                            [3, 1, 2, 2, 2, 1, 0, 2, 2, 1, 1, 3],
-                            [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
-                            [0, 3, 3, 3, 1, 2, 1, 3, 2, 2, 1, 3],
-                            [0, 2, 2, 3, 3, 2, 1, 3, 1,'A',2, 3],
-                            [3, 2,'B',1, 3, 1, 2, 3, 3, 2, 2, 0],
-                            [3, 1, 2, 2, 3, 1, 2, 1, 3, 3, 3, 0],
-                            [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
-                            [3, 1, 1, 2, 2, 0, 1, 2, 2, 2, 1, 3],
-                            [1, 2, 2, 1, 1, 2, 2, 0, 3, 1, 2, 1],
-                            [2, 1, 0, 3, 3, 3, 3, 0, 3, 3, 1, 2]]
-
-    if random.getrandbits(1) == 1:
-        grid_partial_pattern.reverse()
-    if random.getrandbits(1) == 1:
-        # Rotates array 90 degrees
-        grid_partial_pattern = list(zip(*grid_partial_pattern[::-1]))
-
-    grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
-
-    for x in range(math.floor(w / X_GRIDS)):
-        for y in range(math.floor(h / Y_GRIDS)):
-            grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][math.floor(x / (w / (X_GRIDS * 12))) % 12]
-    grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
-    
-    if random.getrandbits(1) == 1:
-        grid_partial_pattern.reverse()
-
-    #checks if the grid is valid
-    grid_part = None
-    while not verify_grid(grid_part, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS)):
-        grid_template = [[0 for y in range(math.floor(h / Y_GRIDS))] for x in range(math.floor(w / X_GRIDS))]
-
-        for x in range(math.floor(w / X_GRIDS)):
-            for y in range(math.floor(h / Y_GRIDS)):
-                grid_template[x][y] = grid_partial_pattern[math.floor(y / (h / (Y_GRIDS * 12))) % 12][math.floor(x / (w / (X_GRIDS * 12))) % 12]
-        grid_part = randomize_grid(grid_template, math.floor(w / X_GRIDS), math.floor(h / Y_GRIDS))
-
-    #places the grid
-    grid = [[None for y in range(h)] for x in range(w)]
-    for x in range(X_GRIDS):
-        for y in range(Y_GRIDS):
-            grid = insert_grid(grid, grid_part, X_GRIDS, Y_GRIDS, w, h, math.floor(w / X_GRIDS) * x,
-                               math.floor(h / Y_GRIDS) * y)
-    # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor(h / (portion * 2)))
-    # grid = insert_grid(grid, grid_part, portion, w, h, 0, math.floor(h / portion))
-    # grid = insert_grid(grid, grid_part, portion, w, h, math.floor(w / portion), math.floor((3 * h) / (portion * 2)))
-    return grid
-
-
 def verify_grid(grid, w, h):
     if grid == None:
         return False
-    
+
     grid_walked = [[False for y in range(h)] for x in range(w)]
-    position = [-1,-1]
+    position = [-1, -1]
     for x in range(w):
         for y in range(h):
             if grid[x][y].walkable:
@@ -182,7 +200,7 @@ def verify_grid(grid, w, h):
             break
     positions = [position]
     grid_walked[position[0]][position[1]] = True
-    
+
     while len(positions) > 0:
         pos = positions.pop(0)
         if pos[0] > 0 and not grid_walked[pos[0] - 1][pos[1]] and grid[pos[0] - 1][pos[1]].walkable:
@@ -197,13 +215,13 @@ def verify_grid(grid, w, h):
         if pos[1] < h - 1 and not grid_walked[pos[0]][pos[1] + 1] and grid[pos[0]][pos[1] + 1].walkable:
             grid_walked[pos[0]][pos[1] + 1] = True
             positions.append([pos[0], pos[1] + 1])
-            
+
     reached_top = False
     reached_left = False
     reached_right = False
     reached_bottom = False
     hive_count = 0
-    
+
     for x in range(w):
         for y in range(h):
             if x == 0 and grid_walked[x][y]:
@@ -216,8 +234,9 @@ def verify_grid(grid, w, h):
                 reached_bottom = True
             if grid_walked[x][y] and grid[x][y].hive:
                 hive_count = hive_count + 1
-                
+
     return reached_top and reached_left and reached_right and reached_bottom and hive_count == 2
+
 
 def randomize_grid(grid_template, w, h):
     grid = [[Tile(False) for y in range(h)] for x in range(w)]
@@ -253,9 +272,9 @@ def randomize_grid(grid_template, w, h):
         grid_count = [[10 for y in range(h)] for x in range(w)]
         for x in range(w):
             for y in range(h):
-                if grid[x][y].hive:     # hive is always walkable
+                if grid[x][y].hive:  # hive is always walkable
                     continue
-                count = -1 if grid[x][y].walkable else 0;
+                count = -1 if grid[x][y].walkable else 0
                 for x_plus in [-1, 0, 1]:
                     for y_plus in [-1, 0, 1]:
                         if grid[(x + x_plus) % w][(y + y_plus) % h].hive:
@@ -273,12 +292,20 @@ def randomize_grid(grid_template, w, h):
 
 
 def get_bots():
+    colours = [[(255, 100, 100), (235, 80, 80)], [(100, 255, 100), (80, 235, 80)], [(100, 100, 255), (80, 80, 235)],
+               [(255, 170, 130), (235, 150, 110)], [(170, 255, 130), (150, 235, 110)],
+               [(255, 130, 170), (235, 110, 150)], [(170, 130, 255), (150, 110, 235)],
+               [(130, 255, 170), (110, 235, 150)], [(130, 170, 255), (110, 150, 235)],
+               [(255, 255, 120), (235, 235, 100)], [(255, 120, 255), (235, 100, 235)],
+               [(120, 255, 255), (100, 235, 235)]]
+    random.shuffle(colours)
+
     bot_path = './bots'
 
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
     bot_ais = [importlib.import_module('bots.' + f).AI(X_SIZE, Y_SIZE) for f in bot_names]
 
-    return [Bot(n, a) for n, a in zip(bot_names, bot_ais)]
+    return [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
 
 
 def main():
