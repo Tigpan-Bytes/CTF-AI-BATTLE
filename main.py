@@ -61,11 +61,23 @@ class BeeUnit:
         self.position = position
         self.data = data
         self.action = ''
+        
+class World:
+    def __init__(self, width, height, tiles):
+        self.width = width
+        self.height = height
+        self.tiles = tiles
 
-class Board:
+    def get_tile(self, x, y):
+        return self.tiles[x % self.width][y % self.height]
+
+    def copy(self):
+        return World(self.width, self.height, self.tiles.copy())
+
+class Game:
     def __init__(self, w, h, bots):
         self.bots = bots
-        self.grid = self.create_grid(w, h)
+        self.world = World(w, h, self.create_grid(w, h))
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
 
     def resize_board(self, w, h):
@@ -81,15 +93,16 @@ class Board:
         hives = []
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
-                if self.grid[x][y].walkable:
-                    if self.grid[x][y].hive:
-                        if self.grid[x][y].hive_index == -1:
-                            self.grid[x][y].hive = False
+                tile = self.world.get_tile(x,y)
+                if tile.walkable:
+                    if tile.hive:
+                        if tile.hive_index == -1:
+                            tile.hive = False
                             pygame.draw.rect(self.screen, BOARD,
                                              (x * self.cell_size + self.x_plus, y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
-                            hives.append([x, y, self.bots[self.grid[x][y].hive_index].hive_colour])
+                            hives.append([x, y, self.bots[tile.hive_index].hive_colour])
                     else:
                         pygame.draw.rect(self.screen, BOARD,
                                          (x * self.cell_size + self.x_plus, y * self.cell_size,
@@ -102,22 +115,21 @@ class Board:
                              (hive[0] * self.cell_size + self.x_plus, hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
-    def to_bees_and_action(self, bee_units):
-        bees = []
-        for unit in bee_units:
+    def to_bees_and_action(self, bees, bee_units):
+        for bee, unit in zip(bees, bee_units):
             if len(unit.action) >= 3:
                 action = unit.action[0]
                 action_data = unit.action[2:]
                 if action == 'M':
-                    if action_data == 'N':
-                        unit.position = (unit.position[0] + X_SIZE) % X_SIZE, (unit.position[1] + 1 + Y_SIZE) % Y_SIZE
-                    elif action_data == 'E':
-                        unit.position = (unit.position[0] + 1 + X_SIZE) % X_SIZE, (unit.position[1] + Y_SIZE) % Y_SIZE
-                    elif action_data == 'S':
-                        unit.position = (unit.position[0] + X_SIZE) % X_SIZE, (unit.position[1] - 1 + Y_SIZE) % Y_SIZE
-                    else:
-                        unit.position = (unit.position[0] - 1 + X_SIZE) % X_SIZE, (unit.position[1] + Y_SIZE) % Y_SIZE
-        return [Bee(unit.position, unit.health, unit.data) for unit in bee_units]
+                    if action_data == 'N' and self.world.get_tile(bee.position[0], bee.position[1] + 1).walkable:
+                        bee.position = (bee.position[0] + X_SIZE) % X_SIZE, (bee.position[1] + 1 + Y_SIZE) % Y_SIZE
+                    elif action_data == 'E' and self.world.get_tile(bee.position[0] + 1, bee.position[1]).walkable:
+                        bee.position = (bee.position[0] + 1 + X_SIZE) % X_SIZE, (bee.position[1] + Y_SIZE) % Y_SIZE
+                    elif action_data == 'S' and self.world.get_tile(bee.position[0], bee.position[1] - 1).walkable:
+                        bee.position = (bee.position[0] + X_SIZE) % X_SIZE, (bee.position[1] - 1 + Y_SIZE) % Y_SIZE
+                    elif action_data == 'W' and self.world.get_tile(bee.position[0] - 1, bee.position[1]).walkable:
+                        bee.position = (bee.position[0] - 1 + X_SIZE) % X_SIZE, (bee.position[1] + Y_SIZE) % Y_SIZE
+        return [Bee(bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
 
     def do_bots(self):
         bot_length = len(self.bots)
@@ -126,7 +138,7 @@ class Board:
             if not self.bots[i].terminated:
                 try:
                     with timeout_limit():
-                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].ai.do_turn(self.grid,
+                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees, self.bots[i].ai.do_turn(self.world.copy(),
                                             [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
                 except TimeoutException as e:
                     print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
@@ -350,26 +362,28 @@ def get_bots():
     #           [(145, 145, 30), (125, 125, 10)], [(145, 30, 145), (125, 10, 125)],
     #           [(30, 145, 145), (10, 125, 125)]]
     colours = [(240,163,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (43,206,72), (255,204,153), (128,128,128),
-               (148,255,181), (143,124,0), (163,224,10), (194,0,136), (0,51,128), (255,164,5), (205,138,157), (255,0,16),
+               (148,255,181), (143,124,0), (163,224,10), (194,0,136), (0,51,128), (255,164,5), (175,101,125), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
     random.shuffle(colours)
 
     bot_path = './bots'
 
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
-    bot_ais = [importlib.import_module('bots.' + f).AI(X_SIZE, Y_SIZE) for f in bot_names]
+    bot_ais = [importlib.import_module('bots.' + f).AI() for f in bot_names]
 
-    return [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
+    bots = [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
+    random.shuffle(bots)
+    return bots
 
 
 def main():
     pygame.init()
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
-    board = Board(X_SIZE, Y_SIZE, get_bots())
+    game = Game(X_SIZE, Y_SIZE, get_bots())
 
     while True:
-        board.update()
+        game.update()
 
         pygame.display.update()
         for event in pygame.event.get():
@@ -377,7 +391,7 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.VIDEORESIZE:
-                board.resize_board(event.w, event.h)
+                game.resize_board(event.w, event.h)
 
 
 # run the main function only if this module is executed as the main script

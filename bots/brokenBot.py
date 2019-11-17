@@ -3,10 +3,8 @@ import math
 
 
 class AI:
-    def __init__(self, width, height):
+    def __init__(self):
         self.hiveCount = 0
-        self.width = width
-        self.height = height
 
     def get_rand_xy(self):
         val = random.randint(0, 3)
@@ -19,11 +17,11 @@ class AI:
         else:
             return -1, 0
 
-    def do_turn(self, grid, position):
+    def do_turn(self, world, position,e,k,l,u,t,f,xc,fd,ew):
         for _ in range(5):
             while True:
                 xy = self.get_rand_xy()
-                if grid[(position[0] + xy[0]) % self.width][(position[1] + xy[1]) % self.height].walkable:
+                if world.get_tile(position[0] + xy[0], position[1] + xy[1]).walkable:
                     position = ((position[0] + xy[0]) % self.width, (position[1] + xy[1]) % self.height)
                     break
         return position

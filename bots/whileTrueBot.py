@@ -2,12 +2,10 @@ import random
 import math
 
 class AI:
-    def __init__(self, width, height):
+    def __init__(self):
         self.hiveCount = 0
-        self.width = width
-        self.height = height
 
-    def do_turn(self, grid, bees):
+    def do_turn(self, world, bees):
         i = 0
         while True:
             i = (i + 1) % 5000

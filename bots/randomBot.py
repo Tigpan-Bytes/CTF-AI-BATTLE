@@ -15,16 +15,14 @@ def get_rand_xy():
 
 
 class AI:
-    def __init__(self, width, height):
+    def __init__(self):
         self.hiveCount = 0
-        self.width = width
-        self.height = height
 
-    def do_turn(self, grid, bees):
+    def do_turn(self, world, bees):
         for bee in bees:
             while True:
                 xya = get_rand_xy()
-                if grid[(bee.position[0] + xya[0]) % self.width][(bee.position[1] + xya[1]) % self.height].walkable:
+                if world.get_tile(bee.position[0] + xya[0], bee.position[1] + xya[1]).walkable:
                     bee.action = 'M ' + xya[2]
                     break
         return bees
