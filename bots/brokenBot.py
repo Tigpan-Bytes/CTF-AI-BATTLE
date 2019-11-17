@@ -19,11 +19,11 @@ class AI:
         else:
             return -1, 0
 
-    def do_turn(self, grid, width, height, position):
+    def do_turn(self, grid, position):
         for _ in range(5):
             while True:
                 xy = self.get_rand_xy()
-                if grid[(position[0] + xy[0]) % width][(position[1] + xy[1]) % height].walkable:
-                    position = ((position[0] + xy[0]) % width, (position[1] + xy[1]) % height)
+                if grid[(position[0] + xy[0]) % self.width][(position[1] + xy[1]) % self.height].walkable:
+                    position = ((position[0] + xy[0]) % self.width, (position[1] + xy[1]) % self.height)
                     break
         return position

@@ -1,7 +1,7 @@
 # import the pygame module, so you can use it
 import pygame
 
-import sys
+import sys, os
 from contextlib import contextmanager
 import threading
 import _thread
@@ -16,11 +16,9 @@ import math
 WHITE = (255, 255, 255)
 BOARD = (191,174,158)
 WALL = (15, 15, 15)
-NULL = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 90, 160)
+BLACK = (0, 0, 0)
 
-TIMEOUT = 0.5
+TIMEOUT = 0.1
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -46,17 +44,23 @@ class Bot:
         self.name = name
         self.terminated = False
         self.ai = ai
-        self.position = (32, 32)
         self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
         self.colour = colour
         self.hives = []
         self.bees = []
 
 class Bee:
-    def __init__(self, position):
-        self.health = 4
+    def __init__(self, position, health=4, data=''):
+        self.health = health
         self.position = position
+        self.data = data
 
+class BeeUnit:
+    def __init__(self, position, health, data):
+        self.health = health
+        self.position = position
+        self.data = data
+        self.action = ''
 
 class Board:
     def __init__(self, w, h, bots):
@@ -91,12 +95,29 @@ class Board:
                                          (x * self.cell_size + self.x_plus, y * self.cell_size,
                                           self.cell_size + 1, self.cell_size + 1))
         for hive in hives:
-            pygame.draw.rect(self.screen, NULL,
+            pygame.draw.rect(self.screen, BLACK,
                              (hive[0] * self.cell_size + self.x_plus - 2, hive[1] * self.cell_size - 2,
                               self.cell_size + 5, self.cell_size + 5))
             pygame.draw.rect(self.screen, hive[2],
                              (hive[0] * self.cell_size + self.x_plus, hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
+
+    def to_bees_and_action(self, bee_units):
+        bees = []
+        for unit in bee_units:
+            if len(unit.action) >= 3:
+                action = unit.action[0]
+                action_data = unit.action[2:]
+                if action == 'M':
+                    if action_data == 'N':
+                        unit.position = (unit.position[0] + X_SIZE) % X_SIZE, (unit.position[1] + 1 + Y_SIZE) % Y_SIZE
+                    elif action_data == 'E':
+                        unit.position = (unit.position[0] + 1 + X_SIZE) % X_SIZE, (unit.position[1] + Y_SIZE) % Y_SIZE
+                    elif action_data == 'S':
+                        unit.position = (unit.position[0] + X_SIZE) % X_SIZE, (unit.position[1] - 1 + Y_SIZE) % Y_SIZE
+                    else:
+                        unit.position = (unit.position[0] - 1 + X_SIZE) % X_SIZE, (unit.position[1] + Y_SIZE) % Y_SIZE
+        return [Bee(unit.position, unit.health, unit.data) for unit in bee_units]
 
     def do_bots(self):
         bot_length = len(self.bots)
@@ -105,26 +126,16 @@ class Board:
             if not self.bots[i].terminated:
                 try:
                     with timeout_limit():
-                        self.bots[i].position = self.bots[i].ai.do_turn(self.grid, X_SIZE, Y_SIZE, self.bots[i].position)
+                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].ai.do_turn(self.grid,
+                                            [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
                 except TimeoutException as e:
                     print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
                 except Exception as e:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno, e)
                     print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
                     self.bots[i].terminated = True
-
-                #pygame.draw.circle(self.screen, NULL,
-                #                   (round(self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell),
-                #                    round(self.bots[i].position[1] * self.cell_size + self.half_cell)),
-                #                   round(self.half_cell))
-                pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                   [(self.bots[i].position[0] * self.cell_size + self.x_plus + 1,
-                                     self.bots[i].position[1] * self.cell_size + self.half_cell),
-                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell,
-                                     self.bots[i].position[1] * self.cell_size + 1),
-                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.cell_size - 1,
-                                     self.bots[i].position[1] * self.cell_size + self.half_cell),
-                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell,
-                                     self.bots[i].position[1] * self.cell_size + self.cell_size - 1)])
 
             for bee in self.bots[i].bees:
                 pygame.draw.polygon(self.screen, self.bots[i].colour,

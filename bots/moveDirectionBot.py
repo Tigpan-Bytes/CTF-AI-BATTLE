@@ -2,26 +2,31 @@ import random
 import math
 
 
+def get_state_xy(state):
+    if state == '0':
+        return 0, 1, 'N'
+    elif state == '1':
+        return 1, 0, 'E'
+    elif state == '2':
+        return 0, -1, 'S'
+    else:
+        return -1, 0, 'W'
+
+
 class AI:
     def __init__(self, width, height):
         self.hiveCount = 0
-        self.state = random.randrange(0, 3)
         self.width = width
         self.height = height
 
-    def get_state_xy(self):
-        if self.state == 0:
-            return 0, 1
-        elif self.state == 1:
-            return 1, 0
-        elif self.state == 2:
-            return 0, -1
-        else:
-            return -1, 0
-
-    def do_turn(self, grid, width, height, position):
-        while True:
-            xy = self.get_state_xy()
-            if grid[(position[0] + xy[0]) % width][(position[1] + xy[1]) % height].walkable:
-                return (position[0] + xy[0]) % width, (position[1] + xy[1]) % height
-            self.state = random.randint(0, 3)
+    def do_turn(self, grid, bees):
+        for bee in bees:
+            if bee.data == '':
+                bee.data = '0'
+            while True:
+                xya = get_state_xy(bee.data)
+                if grid[(bee.position[0] + xya[0]) % self.width][(bee.position[1] + xya[1]) % self.height].walkable:
+                    bee.action = 'M ' + xya[2]
+                    break
+                bee.data = str(random.randint(0, 3))
+        return bees
