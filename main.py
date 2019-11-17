@@ -14,13 +14,13 @@ import random
 import math
 
 WHITE = (255, 255, 255)
-BOARD = (181,169,154)
+BOARD = (191,174,158)
 WALL = (15, 15, 15)
 NULL = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 90, 160)
 
-TIMEOUT = 0.1
+TIMEOUT = 0.5
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -47,12 +47,15 @@ class Bot:
         self.terminated = False
         self.ai = ai
         self.position = (32, 32)
-        self.hive_colour = colour[0]
-        self.bee_colour = colour[1]
+        self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
+        self.colour = colour
         self.hives = []
+        self.bees = []
 
-    def get(self):
-        return self
+class Bee:
+    def __init__(self, position):
+        self.health = 4
+        self.position = position
 
 
 class Board:
@@ -64,12 +67,14 @@ class Board:
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
         self.cell_size = h / Y_SIZE
+        self.half_cell = self.cell_size / 2
         self.x_plus = (w - (self.cell_size * X_SIZE)) / 2
 
     def render(self):
         self.screen.fill(WHITE)
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
+        hives = []
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
                 if self.grid[x][y].walkable:
@@ -80,13 +85,18 @@ class Board:
                                              (x * self.cell_size + self.x_plus, y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
-                            pygame.draw.rect(self.screen, self.bots[self.grid[x][y].hive_index].hive_colour,
-                                             (x * self.cell_size + self.x_plus - 1, y * self.cell_size - 1,
-                                              self.cell_size + 3, self.cell_size + 3))
+                            hives.append([x, y, self.bots[self.grid[x][y].hive_index].hive_colour])
                     else:
                         pygame.draw.rect(self.screen, BOARD,
                                          (x * self.cell_size + self.x_plus, y * self.cell_size,
                                           self.cell_size + 1, self.cell_size + 1))
+        for hive in hives:
+            pygame.draw.rect(self.screen, NULL,
+                             (hive[0] * self.cell_size + self.x_plus - 2, hive[1] * self.cell_size - 2,
+                              self.cell_size + 5, self.cell_size + 5))
+            pygame.draw.rect(self.screen, hive[2],
+                             (hive[0] * self.cell_size + self.x_plus, hive[1] * self.cell_size,
+                              self.cell_size + 1, self.cell_size + 1))
 
     def do_bots(self):
         bot_length = len(self.bots)
@@ -102,10 +112,30 @@ class Board:
                     print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
                     self.bots[i].terminated = True
 
-                pygame.draw.rect(self.screen, self.bots[i].bee_colour,
-                                 (self.bots[i].position[0] * self.cell_size + self.x_plus,
-                                  self.bots[i].position[1] * self.cell_size,
-                                  self.cell_size, self.cell_size))
+                #pygame.draw.circle(self.screen, NULL,
+                #                   (round(self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell),
+                #                    round(self.bots[i].position[1] * self.cell_size + self.half_cell)),
+                #                   round(self.half_cell))
+                pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                   [(self.bots[i].position[0] * self.cell_size + self.x_plus + 1,
+                                     self.bots[i].position[1] * self.cell_size + self.half_cell),
+                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell,
+                                     self.bots[i].position[1] * self.cell_size + 1),
+                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.cell_size - 1,
+                                     self.bots[i].position[1] * self.cell_size + self.half_cell),
+                                    (self.bots[i].position[0] * self.cell_size + self.x_plus + self.half_cell,
+                                     self.bots[i].position[1] * self.cell_size + self.cell_size - 1)])
+
+            for bee in self.bots[i].bees:
+                pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                    [(bee.position[0] * self.cell_size + self.x_plus + 1,
+                                      bee.position[1] * self.cell_size + self.half_cell),
+                                     (bee.position[0] * self.cell_size + self.x_plus + self.half_cell,
+                                      bee.position[1] * self.cell_size + 1),
+                                     (bee.position[0] * self.cell_size + self.x_plus + self.cell_size - 1,
+                                      bee.position[1] * self.cell_size + self.half_cell),
+                                     (bee.position[0] * self.cell_size + self.x_plus + self.half_cell,
+                                      bee.position[1] * self.cell_size + self.cell_size - 1)])
 
             i = i + 1
 
@@ -163,6 +193,13 @@ class Board:
                         x_i = (x_index + x + w) % w
                         y_i = (y_index + y + h) % h
                         grid[x_i][y_i] = Tile(grid_part[x][y].walkable, grid_part[x][y].hive, i if i < len(self.bots) else -1)
+                        if grid[x_i][y_i].hive:
+                            self.bots[i].bees.append(Bee((x_i, y_i)))
+                            self.bots[i].bees.append(Bee((x_i + 1, y_i)))
+                            self.bots[i].bees.append(Bee((x_i, y_i + 1)))
+                            self.bots[i].bees.append(Bee((x_i - 1, y_i)))
+                            self.bots[i].bees.append(Bee((x_i, y_i - 1)))
+
                 i = i + 1
         print(w * h)
         return grid
@@ -292,12 +329,18 @@ def randomize_grid(grid_template, w, h):
 
 
 def get_bots():
-    colours = [[(255, 100, 100), (235, 80, 80)], [(100, 255, 100), (80, 235, 80)], [(100, 100, 255), (80, 80, 235)],
-               [(255, 170, 130), (235, 150, 110)], [(170, 255, 130), (150, 235, 110)],
-               [(255, 130, 170), (235, 110, 150)], [(170, 130, 255), (150, 110, 235)],
-               [(130, 255, 170), (110, 235, 150)], [(130, 170, 255), (110, 150, 235)],
-               [(255, 255, 120), (235, 235, 100)], [(255, 120, 255), (235, 100, 235)],
-               [(120, 255, 255), (100, 235, 235)]]
+    # colours = [[(185, 50, 50), (165, 30, 30)], [(50, 185, 50), (30, 165, 30)],
+    #           [(50, 50, 185), (30, 30, 165)],
+    #
+    #           [(205, 110, 0), (185, 90, 0)], [(110, 205, 0), (90, 185, 0)],
+    #           [(205, 0, 110), (185, 0, 90)], [(110, 0, 205), (90, 0, 185)],
+    #           [(0, 205, 110), (0, 185, 90)], [(0, 110, 205), (0, 90, 185)],
+    #
+    #           [(145, 145, 30), (125, 125, 10)], [(145, 30, 145), (125, 10, 125)],
+    #           [(30, 145, 145), (10, 125, 125)]]
+    colours = [(240,163,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (43,206,72), (255,204,153), (128,128,128),
+               (148,255,181), (143,124,0), (163,224,10), (194,0,136), (0,51,128), (255,164,5), (205,138,157), (255,0,16),
+               (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
     random.shuffle(colours)
 
     bot_path = './bots'
