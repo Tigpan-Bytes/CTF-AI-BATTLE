@@ -23,7 +23,7 @@ class AI:
                 bee.data = '0'
             while True:
                 xya = get_state_xy(bee.data)
-                if world.get_tile(bee.position[0] + xya[0], bee.position[1] + xya[1]).walkable:
+                if world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:
                     bee.action = 'M ' + xya[2]
                     break
                 bee.data = str(random.randint(0, 3))

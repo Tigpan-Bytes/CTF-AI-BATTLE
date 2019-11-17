@@ -1,17 +1,17 @@
 # import the pygame module, so you can use it
-import pygame
-
-import sys, os
-from contextlib import contextmanager
-import threading
 import _thread
-
+import importlib
+import math
+import os
+import random
+import sys
+import threading
+from contextlib import contextmanager
 from os import listdir
 from os.path import isfile, join
-import importlib
 
-import random
-import math
+import pygame
+from class_data import *
 
 WHITE = (255, 255, 255)
 BOARD = (191,174,158)
@@ -24,55 +24,12 @@ X_SIZE = 32
 Y_SIZE = 32
 
 X_GRIDS = 3
-Y_GRIDS = 2
+Y_GRIDS = 3
 
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
         self.msg = msg
-
-
-class Tile:
-    def __init__(self, walkable, hive=False, hive_index= -1):
-        self.walkable = walkable
-        self.hive = hive
-        self.hive_index = hive_index
-
-
-class Bot:
-    def __init__(self, name, ai, colour):
-        self.name = name
-        self.terminated = False
-        self.ai = ai
-        self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
-        self.colour = colour
-        self.hives = []
-        self.bees = []
-
-class Bee:
-    def __init__(self, position, health=4, data=''):
-        self.health = health
-        self.position = position
-        self.data = data
-
-class BeeUnit:
-    def __init__(self, position, health, data):
-        self.health = health
-        self.position = position
-        self.data = data
-        self.action = ''
-        
-class World:
-    def __init__(self, width, height, tiles):
-        self.width = width
-        self.height = height
-        self.tiles = tiles
-
-    def get_tile(self, x, y):
-        return self.tiles[x % self.width][y % self.height]
-
-    def copy(self):
-        return World(self.width, self.height, self.tiles.copy())
 
 class Game:
     def __init__(self, w, h, bots):
@@ -121,14 +78,14 @@ class Game:
                 action = unit.action[0]
                 action_data = unit.action[2:]
                 if action == 'M':
-                    if action_data == 'N' and self.world.get_tile(bee.position[0], bee.position[1] + 1).walkable:
-                        bee.position = (bee.position[0] + X_SIZE) % X_SIZE, (bee.position[1] + 1 + Y_SIZE) % Y_SIZE
-                    elif action_data == 'E' and self.world.get_tile(bee.position[0] + 1, bee.position[1]).walkable:
-                        bee.position = (bee.position[0] + 1 + X_SIZE) % X_SIZE, (bee.position[1] + Y_SIZE) % Y_SIZE
-                    elif action_data == 'S' and self.world.get_tile(bee.position[0], bee.position[1] - 1).walkable:
-                        bee.position = (bee.position[0] + X_SIZE) % X_SIZE, (bee.position[1] - 1 + Y_SIZE) % Y_SIZE
-                    elif action_data == 'W' and self.world.get_tile(bee.position[0] - 1, bee.position[1]).walkable:
-                        bee.position = (bee.position[0] - 1 + X_SIZE) % X_SIZE, (bee.position[1] + Y_SIZE) % Y_SIZE
+                    if action_data == 'N' and self.world.get_tile(bee.position.x, bee.position.y + 1).walkable:
+                        bee.position.y = (bee.position.y + 1) % Y_SIZE
+                    elif action_data == 'E' and self.world.get_tile(bee.position.x + 1, bee.position.y).walkable:
+                        bee.position.x = (bee.position.x + 1) % X_SIZE
+                    elif action_data == 'S' and self.world.get_tile(bee.position.x, bee.position.y - 1).walkable:
+                        bee.position.y = (bee.position.y - 1 + Y_SIZE) % Y_SIZE
+                    elif action_data == 'W' and self.world.get_tile(bee.position.x - 1, bee.position.y).walkable:
+                        bee.position.x = (bee.position.x - 1 + X_SIZE) % X_SIZE
         return [Bee(bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
 
     def do_bots(self):
@@ -151,14 +108,14 @@ class Game:
 
             for bee in self.bots[i].bees:
                 pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                    [(bee.position[0] * self.cell_size + self.x_plus + 1,
-                                      bee.position[1] * self.cell_size + self.half_cell),
-                                     (bee.position[0] * self.cell_size + self.x_plus + self.half_cell,
-                                      bee.position[1] * self.cell_size + 1),
-                                     (bee.position[0] * self.cell_size + self.x_plus + self.cell_size - 1,
-                                      bee.position[1] * self.cell_size + self.half_cell),
-                                     (bee.position[0] * self.cell_size + self.x_plus + self.half_cell,
-                                      bee.position[1] * self.cell_size + self.cell_size - 1)])
+                                    [(bee.position.x * self.cell_size + self.x_plus + 1,
+                                      bee.position.y * self.cell_size + self.half_cell),
+                                     (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                      bee.position.y * self.cell_size + 1),
+                                     (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
+                                      bee.position.y * self.cell_size + self.half_cell),
+                                     (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                      bee.position.y * self.cell_size + self.cell_size - 1)])
 
             i = i + 1
 
@@ -216,15 +173,14 @@ class Game:
                         x_i = (x_index + x + w) % w
                         y_i = (y_index + y + h) % h
                         grid[x_i][y_i] = Tile(grid_part[x][y].walkable, grid_part[x][y].hive, i if i < len(self.bots) else -1)
-                        if grid[x_i][y_i].hive:
-                            self.bots[i].bees.append(Bee((x_i, y_i)))
-                            self.bots[i].bees.append(Bee((x_i + 1, y_i)))
-                            self.bots[i].bees.append(Bee((x_i, y_i + 1)))
-                            self.bots[i].bees.append(Bee((x_i - 1, y_i)))
-                            self.bots[i].bees.append(Bee((x_i, y_i - 1)))
+                        if grid[x_i][y_i].hive and grid[x_i][y_i].hive_index != -1:
+                            self.bots[i].bees.append(Bee(Position(x_i, y_i)))
+                            self.bots[i].bees.append(Bee(Position(x_i + 1, y_i)))
+                            self.bots[i].bees.append(Bee(Position(x_i, y_i + 1)))
+                            self.bots[i].bees.append(Bee(Position(x_i - 1, y_i)))
+                            self.bots[i].bees.append(Bee(Position(x_i, y_i - 1)))
 
                 i = i + 1
-        print(w * h)
         return grid
 
     def update(self):

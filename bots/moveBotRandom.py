@@ -1,14 +1,12 @@
 import random
 import math
 
-
-def get_rand_xy():
-    val = random.randint(0, 3)
-    if val == 0:
+def get_state_xy(state):
+    if state == '0':
         return 0, 1, 'N'
-    elif val == 1:
+    elif state == '1':
         return 1, 0, 'E'
-    elif val == 2:
+    elif state == '2':
         return 0, -1, 'S'
     else:
         return -1, 0, 'W'
@@ -20,9 +18,14 @@ class AI:
 
     def do_turn(self, world, bees):
         for bee in bees:
+            if bee.data == '':
+                bee.data = str(random.randint(0,3))
             while True:
-                xya = get_rand_xy()
+                if random.randint(0, 9) == 0:
+                    bee.data = str(random.randint(0, 3))
+                xya = get_state_xy(bee.data)
                 if world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:
                     bee.action = 'M ' + xya[2]
                     break
+                bee.data = str((int(bee.data) + 1) % 4)
         return bees
