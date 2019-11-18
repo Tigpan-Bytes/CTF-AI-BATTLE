@@ -21,7 +21,7 @@ class AI:
             if bee.data == '':
                 bee.data = str(random.randint(0,3))
             while True:
-                if random.randint(0, 9) == 0:
+                if random.randint(0, 5) == 0:
                     bee.data = str(random.randint(0, 3))
                 xya = get_state_xy(bee.data)
                 if world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:

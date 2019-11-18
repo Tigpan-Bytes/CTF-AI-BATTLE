@@ -102,20 +102,28 @@ class Game:
                 except Exception as e:
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print(exc_type, fname, exc_tb.tb_lineno, e)
                     print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
-                    self.bots[i].terminated = True
+                    print(" > Naughty details:", exc_type, '[' + fname + ',', str(exc_tb.tb_lineno) + ']', e)
 
-            for bee in self.bots[i].bees:
-                pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                    [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                      bee.position.y * self.cell_size + self.half_cell),
-                                     (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                      bee.position.y * self.cell_size + 1),
-                                     (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                      bee.position.y * self.cell_size + self.half_cell),
-                                     (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                      bee.position.y * self.cell_size + self.cell_size - 1)])
+                    self.bots[i].terminated = True
+                    self.bots[i].bees = []
+                    for hive in self.bots[i].hives:
+                        hive.hive = False
+                        hive.hive_index = -1
+                    self.bots[i].hives = []
+
+
+
+                for bee in self.bots[i].bees:
+                    pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                        [(bee.position.x * self.cell_size + self.x_plus + 1,
+                                          bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          bee.position.y * self.cell_size + 1),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
+                                          bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          bee.position.y * self.cell_size + self.cell_size - 1)])
 
             i = i + 1
 
@@ -172,13 +180,17 @@ class Game:
                     for y in range(math.floor(h / Y_GRIDS)):
                         x_i = (x_index + x + w) % w
                         y_i = (y_index + y + h) % h
-                        grid[x_i][y_i] = Tile(grid_part[x][y].walkable, grid_part[x][y].hive, i if i < len(self.bots) else -1)
-                        if grid[x_i][y_i].hive and grid[x_i][y_i].hive_index != -1:
+                        index = i if i < len(self.bots) else -1
+                        grid[x_i][y_i] = Tile(grid_part[x][y].walkable,
+                                              grid_part[x][y].hive if index != -1 else False,
+                                              index)
+                        if grid[x_i][y_i].hive:
                             self.bots[i].bees.append(Bee(Position(x_i, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i + 1, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i, y_i + 1)))
                             self.bots[i].bees.append(Bee(Position(x_i - 1, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i, y_i - 1)))
+                            self.bots[grid[x_i][y_i].hive_index].hives.append(grid[x_i][y_i])
 
                 i = i + 1
         return grid
