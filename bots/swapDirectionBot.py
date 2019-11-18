@@ -1,5 +1,6 @@
 import random
 import math
+from class_data import *
 
 def get_state_xy(state):
     if state == '0':

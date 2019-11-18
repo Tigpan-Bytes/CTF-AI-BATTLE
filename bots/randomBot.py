@@ -1,5 +1,6 @@
 import random
 import math
+from class_data import *
 
 
 def get_rand_xy():
