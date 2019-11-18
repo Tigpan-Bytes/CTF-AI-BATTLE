@@ -3,8 +3,8 @@ import math
 from class_data import *
 
 class AI:
-    def __init__(self):
-        self.hiveCount = 0
+    def __init__(self, index):
+        self.index = index
 
     def do_turn(self, world, bees):
         i = 0

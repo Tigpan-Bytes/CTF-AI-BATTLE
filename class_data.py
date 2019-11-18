@@ -45,6 +45,12 @@ class World:
 
     def get_tile(self, x, y):
         return self.tiles[x % self.width][y % self.height]
+    
+    def breadth_search(x, y, target_func, get_all_options=False, max_depth=0):
+        print('b yeet')
+        
+    def depth_search(x, y, target_x, target_y, max_depth=0):
+        print('d yeet')
 
     def copy(self):
         return World(self.width, self.height, self.tiles.copy())

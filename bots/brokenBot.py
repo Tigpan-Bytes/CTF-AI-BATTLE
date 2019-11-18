@@ -4,8 +4,8 @@ from class_data import *
 
 
 class AI:
-    def __init__(self):
-        self.hiveCount = 0
+    def __init__(self, index):
+        self.index = index
 
     def get_rand_xy(self):
         val = random.randint(0, 3)
