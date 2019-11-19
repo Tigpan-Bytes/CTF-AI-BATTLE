@@ -6,6 +6,7 @@ import traceback
 import random
 import sys
 import threading
+import concurrent.futures
 from contextlib import contextmanager
 from os import listdir
 from os.path import isfile, join
@@ -30,6 +31,20 @@ Y_GRIDS = 3
 class TimeoutException(Exception):
     def __init__(self, msg=''):
         self.msg = msg
+        
+@contextmanager
+def timeout_limit(seconds=TIMEOUT):
+    timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
+    timer.start()
+    try:
+        yield
+    except KeyboardInterrupt:
+        raise TimeoutException()
+    finally:
+        # if the action ends in specified time, timer is canceled
+        timer.cancel()
+        
+        
 
 class Game:
     def __init__(self, w, h):
@@ -90,44 +105,54 @@ class Game:
                     elif action_data == 'W' and self.world.get_tile(bee.position.x - 1, bee.position.y).walkable:
                         bee.position.x = (bee.position.x - 1 + X_SIZE) % X_SIZE
         return [Bee(bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
+    
+    def get_actions(self, bot):
+        with timeout_limit():
+            return bot.ai.do_turn([BeeUnit(bee.position, bee.health, bee.data) for bee in bot.bees])
+        return [BeeUnit(bee.position, bee.health, bee.data) for bee in bot.bees]
 
     def do_bots(self):
         bot_length = len(self.bots)
-        i = 0
-        while i < bot_length:
-            if not self.bots[i].terminated:
-                try:
-                    with timeout_limit():
-                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees, self.bots[i].ai.do_turn(
-                                            [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
-                except TimeoutException as e:
-                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
-                except Exception:
-                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
-                    print(" > Naughty details:", traceback.format_exc())
+        bot_threads = [None for _ in range(bot_length)]
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            i = 0
+            while i < bot_length:
+                if not self.bots[i].terminated:
+                    try:
+                        bot_threads[i] = executor.submit(self.get_actions, self.bots[i])
+                    except TimeoutException as e:
+                        print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                    except Exception:
+                        print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                        print(" > Naughty details:", traceback.format_exc())
 
-                    self.bots[i].terminated = True
-                    self.bots[i].bees = []
-                    for hive in self.bots[i].hives:
-                        hive.hive = False
-                        hive.hive_index = -1
-                    self.bots[i].hives = []
+                        self.bots[i].terminated = True
+                        self.bots[i].bees = []
+                        for hive in self.bots[i].hives:
+                            hive.hive = False
+                            hive.hive_index = -1
+                        self.bots[i].hives = []
+                i = i + 1
 
+            i = 0
+            while i < bot_length:
+                if not self.bots[i].terminated:
+                    self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees,
+                                        bot_threads[i].result())
+                    for bee in self.bots[i].bees:
+                        pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                            [(bee.position.x * self.cell_size + self.x_plus + 1,
+                                              bee.position.y * self.cell_size + self.half_cell),
+                                             (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                              bee.position.y * self.cell_size + 1),
+                                             (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
+                                              bee.position.y * self.cell_size + self.half_cell),
+                                             (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                              bee.position.y * self.cell_size + self.cell_size - 1)])
 
-
-                for bee in self.bots[i].bees:
-                    pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                        [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                          bee.position.y * self.cell_size + self.half_cell),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                          bee.position.y * self.cell_size + 1),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                          bee.position.y * self.cell_size + self.half_cell),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                          bee.position.y * self.cell_size + self.cell_size - 1)])
-
-            i = i + 1
-        self.turn = self.turn + 1
+                i = i + 1
+            self.turn = self.turn + 1
 
     def create_grid(self, w, h):
         grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
@@ -215,19 +240,6 @@ class Game:
     def update(self):
         self.render()
         self.do_bots()
-
-
-@contextmanager
-def timeout_limit(seconds=TIMEOUT):
-    timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
-    timer.start()
-    try:
-        yield
-    except KeyboardInterrupt:
-        raise TimeoutException()
-    finally:
-        # if the action ends in specified time, timer is canceled
-        timer.cancel()
 
 
 def verify_grid(grid, w, h):

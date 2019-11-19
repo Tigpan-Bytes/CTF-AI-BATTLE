@@ -14,7 +14,7 @@ class AI:
 
     def do_turn(self, bees):
         for bee in bees:
-            if random.randint(0, 20) == 0:
+            if random.randint(0, 10) == 0:
                 bee.action = 'M ' + random.choice(['N','E','S','W'])
             else:
                 path = self.world.breadth_search(bee.position, self.is_enemy_hive)
@@ -24,6 +24,6 @@ class AI:
                     cell = self.world.get_tile(bee.position.x, bee.position.y)
                     if self.is_enemy_hive(cell, bee.position):
                         self.attacked_hives.append(cell.hive_index)
-                        if len(self.attacked_hives) >= 6:
-                            self.attacked_hives.pop(random.randint(0,5))
+                        if len(self.attacked_hives) >= 5:
+                            self.attacked_hives.pop(random.randint(0,4))
         return bees
