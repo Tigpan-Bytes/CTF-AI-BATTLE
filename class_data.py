@@ -1,7 +1,5 @@
-class Position:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+from collections import deque
+import heapq
 
 
 class Tile:
@@ -9,6 +7,7 @@ class Tile:
         self.walkable = walkable
         self.hive = hive
         self.hive_index = hive_index
+        self.search_index = 0
 
 
 class Bot:
@@ -37,20 +36,130 @@ class BeeUnit:
         self.action = ''
 
 
+class Position:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class MovePosition:
+    def __init__(self, x, y, direction):
+        self.x = x
+        self.y = y
+        self.direction = direction
+
+class MoveCostPosition:
+    def __init__(self, x, y, direction, priority):
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.priority = priority
+
+    def __lt__(self, other):
+        return self.priority < other.priority
+
+    def __le__(self, other):
+        return self.priority <= other.priority
+
+
+class Queue:
+    def __init__(self):
+        self.elements = deque()
+
+    def empty(self):
+        return len(self.elements) == 0
+
+    def enqueue(self, x):
+        self.elements.append(x)
+
+    def dequeue(self):
+        return self.elements.popleft()
+
+class PriorityQueue:
+    def __init__(self):
+        self.elements = []
+
+    def empty(self):
+        return len(self.elements) == 0
+
+    def enqueue(self, item):
+        heapq.heappush(self.elements, item)
+
+    def dequeue(self):
+        return heapq.heappop(self.elements)
+
+
 class World:
     def __init__(self, width, height, tiles):
         self.width = width
+        self.half_width = int(width / 2)
         self.height = height
+        self.half_height = int(height / 2)
         self.tiles = tiles
+        self.search_index = 0
 
     def get_tile(self, x, y):
         return self.tiles[x % self.width][y % self.height]
-    
-    def breadth_search(x, y, target_func, get_all_options=False, max_depth=0):
-        print('b yeet')
-        
-    def depth_search(x, y, target_x, target_y, max_depth=0):
-        print('d yeet')
+
+    def get_directions(self, x, y):
+        if (x + y) & 1 == 0:
+            return [(0, 1, 'N'), (0, -1, 'S'), (1, 0, 'E'), (-1, 0, 'W')]
+        return [(-1, 0, 'W'), (1, 0, 'E'), (0, -1, 'S'), (0, 1, 'N')]
+
+    def breadth_search(self, start, target_func, max_distance=0, get_all_options=False):
+        self.search_index = self.search_index + 1
+
+        cell = self.get_tile(start.x, start.y)
+        if target_func(cell, Position(start.x, start.y)):
+            return None
+        cell.search_index = self.search_index
+
+        frontier = Queue()
+        frontier.enqueue(MovePosition(start.x, start.y, ''))
+        while not frontier.empty():
+            current = frontier.dequeue()
+
+            if target_func(self.get_tile(current.x, current.y), Position(current.x, current.y)):
+                return current
+
+            for dir in self.get_directions(current.x, current.y):
+                cell = self.get_tile(current.x + dir[0], current.y + dir[1])
+                if cell.walkable and cell.search_index != self.search_index:
+                    cell.search_index = self.search_index
+                    frontier.enqueue(MovePosition(current.x + dir[0], current.y + dir[1], current.direction + dir[2]))
+        return None
+
+    def heuristic(self, a, b):
+        x = abs(a.x - b.x)
+        if x > self.half_width:
+            x = self.width - x
+        y = abs(a.y - b.y)
+        if y > self.half_height:
+            y = self.height - y
+        return x + y
+
+    def depth_search(self, start, target, max_distance=0):
+        frontier = PriorityQueue()
+        frontier.enqueue(MoveCostPosition(start.x, start.y, '', 0))
+        cost_at = {(start.x, start.y): 0}
+
+        while not frontier.empty():
+            current = frontier.dequeue()
+
+            if current.x == target.x and current.y == target.y:
+                return MovePosition(current.x, current.y, current.direction)
+
+            for dir in self.get_directions(current.x, current.y):
+                new_cost = cost_at[(current.x, current.y)] + 1
+                next_pos = MoveCostPosition((current.x + dir[0] + self.width) % self.width,
+                                            (current.y + dir[1] + self.height) % self.height,
+                                            current.direction + dir[2], 0)
+                pos_tuple = (next_pos.x, next_pos.y)
+
+                if self.get_tile(next_pos.x, next_pos.y).walkable and (pos_tuple not in cost_at or new_cost < cost_at[pos_tuple]):
+                    cost_at[pos_tuple] = new_cost
+                    next_pos.priority = new_cost + self.heuristic(target, next_pos)
+                    frontier.enqueue(next_pos)
+        return None
 
     def copy(self):
         return World(self.width, self.height, self.tiles.copy())

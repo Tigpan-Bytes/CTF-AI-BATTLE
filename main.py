@@ -2,7 +2,7 @@
 import _thread
 import importlib
 import math
-import os
+import traceback
 import random
 import sys
 import threading
@@ -18,7 +18,7 @@ BOARD = (191,174,158)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
-TIMEOUT = 0.1
+TIMEOUT = 0.5
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -36,6 +36,7 @@ class Game:
         self.bots = bots
         self.world = World(w, h, self.create_grid(w, h))
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
+        self.turn = 0
 
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
@@ -98,12 +99,10 @@ class Game:
                         self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees, self.bots[i].ai.do_turn(self.world.copy(),
                                             [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
                 except TimeoutException as e:
-                    print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
-                except Exception as e:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print('Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
-                    print(" > Naughty details:", exc_type, '[' + fname + ',', str(exc_tb.tb_lineno) + ']', e)
+                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                except Exception:
+                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                    print(" > Naughty details:", traceback.format_exc())
 
                     self.bots[i].terminated = True
                     self.bots[i].bees = []
@@ -126,6 +125,7 @@ class Game:
                                           bee.position.y * self.cell_size + self.cell_size - 1)])
 
             i = i + 1
+        self.turn = self.turn + 1
 
     def create_grid(self, w, h):
         grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
@@ -321,17 +321,17 @@ def randomize_grid(grid_template, w, h):
 
 def get_bots():
     colours = [(255,100,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
-               (148,255,181), (113,94,0), (163,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
+               (148,255,181), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0), (255,80,5)]
     random.shuffle(colours)
 
     bot_path = './bots'
 
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
+    random.shuffle(bot_names)
     bot_ais = [importlib.import_module('bots.' + f).AI(i) for f, i in zip(bot_names, range(len(bot_names)))]
 
     bots = [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
-    random.shuffle(bots)
     return bots
 
 

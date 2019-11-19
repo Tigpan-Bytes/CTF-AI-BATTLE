@@ -7,7 +7,7 @@ class AI:
         self.index = index
 
     def do_turn(self, world, bees):
-        i = 0
-        while True:
-            i = (i + 1) % 5000
+        #i = 0
+        #while True:
+        #    i = (i + 1) % 5000
         return bees
