@@ -7,7 +7,6 @@ class Tile:
         self.walkable = walkable
         self.hive = hive
         self.hive_index = hive_index
-        self.search_index = 0
 
 
 class Bot:
@@ -95,7 +94,26 @@ class World:
         self.height = height
         self.half_height = int(height / 2)
         self.tiles = tiles
-        self.search_index = 0
+        self.neighbors = self.generate_neighbors()
+
+    def generate_neighbors(self):
+        neighbors = [[[] for y in range(self.height)] for x in range(self.width)]
+        for x in range(self.width):
+            for y in range(self.height):
+                directions = []
+                cell = self.get_tile(x, y)
+                if not cell.walkable:
+                    continue
+                if self.get_tile(x, y + 1).walkable:
+                    directions.append((0, 1))
+                if self.get_tile(x, y - 1).walkable:
+                    directions.append((0, -1))
+                if self.get_tile(x + 1, y).walkable:
+                    directions.append((1, 0))
+                if self.get_tile(x - 1, y).walkable:
+                    directions.append((-1, 0))
+                neighbors[x][y] = directions
+        return neighbors
 
     def get_tile(self, x, y):
         return self.tiles[x % self.width][y % self.height]
@@ -105,27 +123,48 @@ class World:
             return [(0, 1, 'N'), (0, -1, 'S'), (1, 0, 'E'), (-1, 0, 'W')]
         return [(-1, 0, 'W'), (1, 0, 'E'), (0, -1, 'S'), (0, 1, 'N')]
 
-    def breadth_search(self, start, target_func, max_distance=0, get_all_options=False):
-        self.search_index = self.search_index + 1
+    def get_breadth_directions(self, x, y):
+        if (x + y) & 1 == 0:
+            return [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        return [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
+    def breadth_search(self, start, target_func, max_distance=0, get_all_options=False):
         cell = self.get_tile(start.x, start.y)
         if target_func(cell, Position(start.x, start.y)):
             return None
-        cell.search_index = self.search_index
 
         frontier = Queue()
-        frontier.enqueue(MovePosition(start.x, start.y, ''))
+        frontier.enqueue((start.x, start.y))
+
+        path_from = {(start.x, start.y): (0, 0)}
+
         while not frontier.empty():
             current = frontier.dequeue()
 
-            if target_func(self.get_tile(current.x, current.y), Position(current.x, current.y)):
-                return current
+            if target_func(self.get_tile(current[0], current[1]), Position(current[0], current[1])):
+                path = ''
+                current_position = current
+                next_movement = path_from[current_position]
+                while next_movement != (0, 0):
+                    if next_movement == (0, 1):
+                        path = 'N' + path
+                    if next_movement == (0, -1):
+                        path = 'S' + path
+                    if next_movement == (1, 0):
+                        path = 'E' + path
+                    if next_movement == (-1, 0):
+                        path = 'W' + path
+                    current_position = ((current_position[0] - next_movement[0] + self.width) % self.width,
+                                        (current_position[1] - next_movement[1] + self.height) % self.height)
+                    next_movement = path_from[current_position]
 
-            for dir in self.get_directions(current.x, current.y):
-                cell = self.get_tile(current.x + dir[0], current.y + dir[1])
-                if cell.walkable and cell.search_index != self.search_index:
-                    cell.search_index = self.search_index
-                    frontier.enqueue(MovePosition(current.x + dir[0], current.y + dir[1], current.direction + dir[2]))
+                return MovePosition(current[0], current[1], path)
+
+            for dir in self.neighbors[current[0]][current[1]]:
+                new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
+                if new_pos not in path_from:
+                    path_from[new_pos] = (dir[0], dir[1])
+                    frontier.enqueue(new_pos)
         return None
 
     def heuristic(self, a, b):
