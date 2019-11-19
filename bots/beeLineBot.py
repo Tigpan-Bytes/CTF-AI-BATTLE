@@ -4,19 +4,15 @@ from class_data import *
 
 
 class AI:
-    def __init__(self, index):
+    def __init__(self, index, world):
         self.index = index
+        self.world = world
 
-    def do_turn(self, world, bees):
+    def do_turn(self, bees):
         for bee in bees:
             if bee.data == '':
-                thing = None
-                x = random.randint(0, world.width - 1)
-                while thing == None:
-                    thing = world.depth_search(bee.position, Position(x, random.randint(0, world.width - 1)))
-                    x = x + 1
-                bee.data = thing.direction
-            if bee.data != '' and len(bee.data) >= 1:
+                bee.data = self.world.depth_search(bee.position, Position(32 * random.randint(0, 2), 32 * random.randint(0, 2))).direction
+            if bee.data != '':
                 bee.action = 'M ' + bee.data[0]
                 bee.data = bee.data[1:]
         return bees

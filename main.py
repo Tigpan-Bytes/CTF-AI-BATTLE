@@ -18,7 +18,7 @@ BOARD = (191,174,158)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
-TIMEOUT = 0.05
+TIMEOUT = 1
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -32,9 +32,11 @@ class TimeoutException(Exception):
         self.msg = msg
 
 class Game:
-    def __init__(self, w, h, bots):
-        self.bots = bots
+    def __init__(self, w, h):
         self.world = World(w, h, self.create_grid(w, h))
+        self.bots = get_bots(self.world)
+        self.world.tiles = self.set_hives(w, h, self.world.tiles)
+        self.world.generate_neighbors()
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
         self.turn = 0
 
@@ -96,7 +98,7 @@ class Game:
             if not self.bots[i].terminated:
                 try:
                     with timeout_limit():
-                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees, self.bots[i].ai.do_turn(self.world.copy(),
+                        self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees, self.bots[i].ai.do_turn(
                                             [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
                 except TimeoutException as e:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
@@ -170,6 +172,22 @@ class Game:
 
         # places the grid tile in the main grid
         grid = [[None for y in range(h)] for x in range(w)]
+        for column in range(X_GRIDS):
+            for row in range(Y_GRIDS):
+                x_index = math.floor(w / X_GRIDS) * column
+                y_index = math.floor(h / Y_GRIDS) * row
+
+                for x in range(math.floor(w / X_GRIDS)):
+                    for y in range(math.floor(h / Y_GRIDS)):
+                        x_i = (x_index + x + w) % w
+                        y_i = (y_index + y + h) % h
+                        grid[x_i][y_i] = Tile(grid_part[x][y].walkable,
+                                              grid_part[x][y].hive,
+                                              -1)
+
+        return grid
+    
+    def set_hives(self, w, h, grid):
         i = 0  # index of bots
         for column in range(X_GRIDS):
             for row in range(Y_GRIDS):
@@ -181,17 +199,16 @@ class Game:
                         x_i = (x_index + x + w) % w
                         y_i = (y_index + y + h) % h
                         index = i if i < len(self.bots) else -1
-                        grid[x_i][y_i] = Tile(grid_part[x][y].walkable,
-                                              grid_part[x][y].hive if index != -1 else False,
-                                              index)
+                        if index == -1:
+                            grid[x_i][y_i].hive = False
                         if grid[x_i][y_i].hive:
+                            grid[x_i][y_i].hive_index = index
                             self.bots[i].bees.append(Bee(Position(x_i, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i + 1, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i, y_i + 1)))
                             self.bots[i].bees.append(Bee(Position(x_i - 1, y_i)))
                             self.bots[i].bees.append(Bee(Position(x_i, y_i - 1)))
                             self.bots[grid[x_i][y_i].hive_index].hives.append(grid[x_i][y_i])
-
                 i = i + 1
         return grid
 
@@ -319,7 +336,7 @@ def randomize_grid(grid_template, w, h):
     return grid
 
 
-def get_bots():
+def get_bots(world):
     colours = [(255,100,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
                (148,255,181), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0), (255,80,5)]
@@ -329,7 +346,7 @@ def get_bots():
 
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
     random.shuffle(bot_names)
-    bot_ais = [importlib.import_module('bots.' + f).AI(i) for f, i in zip(bot_names, range(len(bot_names)))]
+    bot_ais = [importlib.import_module('bots.' + f).AI(i, world.copy()) for f, i in zip(bot_names, range(len(bot_names)))]
 
     bots = [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
     return bots
@@ -339,7 +356,7 @@ def main():
     pygame.init()
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
-    game = Game(X_SIZE, Y_SIZE, get_bots())
+    game = Game(X_SIZE, Y_SIZE)
 
     while True:
         game.update()

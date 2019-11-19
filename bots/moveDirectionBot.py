@@ -15,16 +15,17 @@ def get_state_xy(state):
 
 
 class AI:
-    def __init__(self, index):
+    def __init__(self, index, world):
         self.index = index
+        self.world = world
 
-    def do_turn(self, world, bees):
+    def do_turn(self, bees):
         for bee in bees:
             if bee.data == '':
                 bee.data = '0'
             while True:
                 xya = get_state_xy(bee.data)
-                if world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:
+                if self.world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:
                     bee.action = 'M ' + xya[2]
                     break
                 bee.data = str(random.randint(0, 3))

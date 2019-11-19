@@ -94,7 +94,6 @@ class World:
         self.height = height
         self.half_height = int(height / 2)
         self.tiles = tiles
-        self.neighbors = self.generate_neighbors()
 
     def generate_neighbors(self):
         neighbors = [[[] for y in range(self.height)] for x in range(self.width)]
@@ -104,14 +103,24 @@ class World:
                 cell = self.get_tile(x, y)
                 if not cell.walkable:
                     continue
-                if self.get_tile(x, y + 1).walkable:
-                    directions.append((0, 1))
-                if self.get_tile(x, y - 1).walkable:
-                    directions.append((0, -1))
-                if self.get_tile(x + 1, y).walkable:
-                    directions.append((1, 0))
-                if self.get_tile(x - 1, y).walkable:
-                    directions.append((-1, 0))
+                if (x + y) & 1 == 0:
+                    if self.get_tile(x, y + 1).walkable:
+                        directions.append((0, 1))
+                    if self.get_tile(x, y - 1).walkable:
+                        directions.append((0, -1))
+                    if self.get_tile(x + 1, y).walkable:
+                        directions.append((1, 0))
+                    if self.get_tile(x - 1, y).walkable:
+                        directions.append((-1, 0))
+                else:
+                    if self.get_tile(x - 1, y).walkable:
+                        directions.append((-1, 0))
+                    if self.get_tile(x + 1, y).walkable:
+                        directions.append((1, 0))
+                    if self.get_tile(x, y - 1).walkable:
+                        directions.append((0, -1))
+                    if self.get_tile(x, y + 1).walkable:
+                        directions.append((0, 1))
                 neighbors[x][y] = directions
         return neighbors
 
@@ -201,4 +210,9 @@ class World:
         return None
 
     def copy(self):
-        return World(self.width, self.height, self.tiles.copy())
+        new_world = World(self.width, self.height, self.tiles.copy())
+        new_world.neighbors = new_world.generate_neighbors()
+        return new_world
+    
+    
+    
