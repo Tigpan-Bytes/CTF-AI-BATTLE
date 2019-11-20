@@ -74,20 +74,20 @@ class Game:
                         if tile.hive_index == -1:
                             tile.hive = False
                             pygame.draw.rect(self.screen, BOARD,
-                                             (x * self.cell_size + self.x_plus, y * self.cell_size,
+                                             (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
                             hives.append([x, y, self.bots[tile.hive_index].hive_colour])
                     else:
                         pygame.draw.rect(self.screen, BOARD,
-                                         (x * self.cell_size + self.x_plus, y * self.cell_size,
+                                         (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                           self.cell_size + 1, self.cell_size + 1))
         for hive in hives:
             pygame.draw.rect(self.screen, BLACK,
-                             (hive[0] * self.cell_size + self.x_plus - 2, hive[1] * self.cell_size - 2,
+                             (hive[0] * self.cell_size + self.x_plus - 2, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size - 2,
                               self.cell_size + 5, self.cell_size + 5))
             pygame.draw.rect(self.screen, hive[2],
-                             (hive[0] * self.cell_size + self.x_plus, hive[1] * self.cell_size,
+                             (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
     def to_bees_and_action(self, bees, bee_units):
@@ -143,13 +143,13 @@ class Game:
                     for bee in self.bots[i].bees:
                         pygame.draw.polygon(self.screen, self.bots[i].colour,
                                             [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                              bee.position.y * self.cell_size + self.half_cell),
+                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
                                              (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                              bee.position.y * self.cell_size + 1),
+                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
                                              (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                              bee.position.y * self.cell_size + self.half_cell),
+                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
                                              (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                              bee.position.y * self.cell_size + self.cell_size - 1)])
+                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
 
                 i = i + 1
             self.turn = self.turn + 1

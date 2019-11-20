@@ -46,20 +46,6 @@ class MovePosition:
         self.y = y
         self.direction = direction
 
-class MoveCostPosition:
-    def __init__(self, x, y, direction, priority):
-        self.x = x
-        self.y = y
-        self.direction = direction
-        self.priority = priority
-
-    def __lt__(self, other):
-        return self.priority < other.priority
-
-    def __le__(self, other):
-        return self.priority <= other.priority
-
-
 class Queue:
     def __init__(self):
         self.elements = deque()
@@ -80,8 +66,8 @@ class PriorityQueue:
     def empty(self):
         return len(self.elements) == 0
 
-    def enqueue(self, item):
-        heapq.heappush(self.elements, item)
+    def enqueue(self, item, priority):
+        heapq.heappush(self.elements, (priority, item))
 
     def dequeue(self):
         return heapq.heappop(self.elements)
@@ -132,18 +118,15 @@ class World:
             return [(0, 1, 'N'), (0, -1, 'S'), (1, 0, 'E'), (-1, 0, 'W')]
         return [(-1, 0, 'W'), (1, 0, 'E'), (0, -1, 'S'), (0, 1, 'N')]
 
-    def breadth_search(self, start, target_func, max_distance=0, get_all_options=False):
-        cell = self.get_tile(start.x, start.y)
-        if target_func(cell, Position(start.x, start.y)):
-            return None
-
+    def breadth_search(self, start, target_func, max_distance=5318008, get_all_options=False):
         frontier = Queue()
-        frontier.enqueue((start.x, start.y))
+        frontier.enqueue(((start.x, start.y), 0))
 
         path_from = {(start.x, start.y): (0, 0)}
 
         while not frontier.empty():
-            current = frontier.dequeue()
+            dequeued = frontier.dequeue()
+            current = dequeued[0]
 
             if target_func(self.get_tile(current[0], current[1]), Position(current[0], current[1])):
                 path = ''
@@ -165,43 +148,60 @@ class World:
                 return MovePosition(current[0], current[1], path)
 
             for dir in self.neighbors[current[0]][current[1]]:
-                new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
-                if new_pos not in path_from:
-                    path_from[new_pos] = (dir[0], dir[1])
-                    frontier.enqueue(new_pos)
+                cost = dequeued[1] + 1
+                if cost < max_distance:
+                    new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
+                    if new_pos not in path_from:
+                        path_from[new_pos] = (dir[0], dir[1])
+                        frontier.enqueue((new_pos, cost))
         return None
 
-    def heuristic(self, a, b):
-        x = abs(a.x - b.x)
+    def heuristic(self, a, b_tuple):
+        x = abs(a.x - b_tuple[0])
         if x > self.half_width:
             x = self.width - x
-        y = abs(a.y - b.y)
+        y = abs(a.y - b_tuple[1])
         if y > self.half_height:
             y = self.height - y
         return x + y
 
-    def depth_search(self, start, target, max_distance=0):
+    def depth_search(self, start, target, max_distance=5318008):
         frontier = PriorityQueue()
-        frontier.enqueue(MoveCostPosition(start.x, start.y, '', 0))
+        frontier.enqueue((start.x, start.y), 0)
+        
         cost_at = {(start.x, start.y): 0}
+        path_from = {(start.x, start.y): (0, 0)}
 
         while not frontier.empty():
-            current = frontier.dequeue()
+            current = frontier.dequeue()[1]
 
-            if current.x == target.x and current.y == target.y:
-                return MovePosition(current.x, current.y, current.direction)
+            if current[0] == target.x and current[1] == target.y:
+                path = ''
+                current_position = current
+                next_movement = path_from[current_position]
+                while next_movement != (0, 0):
+                    if next_movement == (0, 1):
+                        path = 'N' + path
+                    if next_movement == (0, -1):
+                        path = 'S' + path
+                    if next_movement == (1, 0):
+                        path = 'E' + path
+                    if next_movement == (-1, 0):
+                        path = 'W' + path
+                    current_position = ((current_position[0] - next_movement[0] + self.width) % self.width,
+                                        (current_position[1] - next_movement[1] + self.height) % self.height)
+                    next_movement = path_from[current_position]
+                return MovePosition(current[0], current[1], path)
 
-            for dir in self.get_directions(current.x, current.y):
-                new_cost = cost_at[(current.x, current.y)] + 1
-                next_pos = MoveCostPosition((current.x + dir[0] + self.width) % self.width,
-                                            (current.y + dir[1] + self.height) % self.height,
-                                            current.direction + dir[2], 0)
-                pos_tuple = (next_pos.x, next_pos.y)
+            for dir in self.neighbors[current[0]][current[1]]:
+                new_cost = cost_at[(current[0], current[1])] + 1
+                if new_cost < max_distance:      
+                    next_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
 
-                if self.get_tile(next_pos.x, next_pos.y).walkable and (pos_tuple not in cost_at or new_cost < cost_at[pos_tuple]):
-                    cost_at[pos_tuple] = new_cost
-                    next_pos.priority = new_cost + self.heuristic(target, next_pos)
-                    frontier.enqueue(next_pos)
+                    if self.get_tile(next_pos[0], next_pos[1]).walkable and (next_pos not in cost_at or new_cost < cost_at[next_pos]):
+                        cost_at[next_pos] = new_cost
+                        path_from[next_pos] = (dir[0], dir[1])
+                        frontier.enqueue(next_pos, new_cost + self.heuristic(target, next_pos))
         return None
 
     def copy(self):
