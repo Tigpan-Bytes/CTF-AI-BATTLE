@@ -132,11 +132,6 @@ class World:
             return [(0, 1, 'N'), (0, -1, 'S'), (1, 0, 'E'), (-1, 0, 'W')]
         return [(-1, 0, 'W'), (1, 0, 'E'), (0, -1, 'S'), (0, 1, 'N')]
 
-    def get_breadth_directions(self, x, y):
-        if (x + y) & 1 == 0:
-            return [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        return [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
     def breadth_search(self, start, target_func, max_distance=0, get_all_options=False):
         cell = self.get_tile(start.x, start.y)
         if target_func(cell, Position(start.x, start.y)):
