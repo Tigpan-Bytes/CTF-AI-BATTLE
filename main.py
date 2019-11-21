@@ -6,7 +6,6 @@ import traceback
 import random
 import sys
 import threading
-import concurrent.futures
 from contextlib import contextmanager
 from os import listdir
 from os.path import isfile, join
@@ -105,54 +104,46 @@ class Game:
                     elif action_data == 'W' and self.world.get_tile(bee.position.x - 1, bee.position.y).walkable:
                         bee.position.x = (bee.position.x - 1 + X_SIZE) % X_SIZE
         return [Bee(bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
-    
-    def get_actions(self, bot):
-        with timeout_limit():
-            return bot.ai.do_turn([BeeUnit(bee.position, bee.health, bee.data) for bee in bot.bees])
-        return [BeeUnit(bee.position, bee.health, bee.data) for bee in bot.bees]
 
     def do_bots(self):
         bot_length = len(self.bots)
-        bot_threads = [None for _ in range(bot_length)]
-        
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            i = 0
-            while i < bot_length:
-                if not self.bots[i].terminated:
-                    try:
-                        bot_threads[i] = executor.submit(self.get_actions, self.bots[i])
-                    except TimeoutException as e:
-                        print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
-                    except Exception:
-                        print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
-                        print(" > Naughty details:", traceback.format_exc())
 
-                        self.bots[i].terminated = True
-                        self.bots[i].bees = []
-                        for hive in self.bots[i].hives:
-                            hive.hive = False
-                            hive.hive_index = -1
-                        self.bots[i].hives = []
-                i = i + 1
-
-            i = 0
-            while i < bot_length:
-                if not self.bots[i].terminated:
+        i = 0
+        while i < bot_length:
+            if not self.bots[i].terminated:
+                try:
                     self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees,
-                                        bot_threads[i].result())
-                    for bee in self.bots[i].bees:
-                        pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                            [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
-                                             (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
-                                             (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
-                                             (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                              (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
+                                        self.bots[i].ai.do_turn([BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
+                except TimeoutException as e:
+                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                except Exception:
+                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                    print(" > Naughty details:", traceback.format_exc())
 
-                i = i + 1
-            self.turn = self.turn + 1
+                    self.bots[i].terminated = True
+                    self.bots[i].bees = []
+                    for hive in self.bots[i].hives:
+                        hive.hive = False
+                        hive.hive_index = -1
+                    self.bots[i].hives = []
+            i = i + 1
+
+        i = 0
+        while i < bot_length:
+            if not self.bots[i].terminated:
+                for bee in self.bots[i].bees:
+                    pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                        [(bee.position.x * self.cell_size + self.x_plus + 1,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
+
+            i = i + 1
+        self.turn = self.turn + 1
 
     def create_grid(self, w, h):
         grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
@@ -358,11 +349,15 @@ def get_bots(world):
 
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
     random.shuffle(bot_names)
-    bot_ais = [importlib.import_module('bots.' + f).AI(i, world.copy()) for f, i in zip(bot_names, range(len(bot_names)))]
-
-    bots = [Bot(n, a, c) for n, a, c in zip(bot_names, bot_ais, colours)]
+    bots = []
+    for i in range(len(bot_names)):
+        try:
+            bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i, world.copy())
+            bots.append(Bot(bot_names[i], bot_ai, colours.pop(0)))
+        except Exception:
+            print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
+            print(" > Naughty details:", traceback.format_exc())
     return bots
-
 
 def main():
     pygame.init()
