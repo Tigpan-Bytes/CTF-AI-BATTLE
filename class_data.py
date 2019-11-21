@@ -5,6 +5,8 @@ import heapq
 class Tile:
     def __init__(self, walkable, hive=False, hive_index=-1):
         self.walkable = walkable
+        self.food = False
+        self.was_hive = hive
         self.hive = hive
         self.hive_index = hive_index
 

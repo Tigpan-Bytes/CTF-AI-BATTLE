@@ -15,6 +15,7 @@ from class_data import *
 
 WHITE = (255, 255, 255)
 BOARD = (191,174,158)
+FOOD = (211,245,140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
@@ -26,6 +27,8 @@ Y_SIZE = 32
 X_GRIDS = 3
 Y_GRIDS = 3
 
+X_GRID_SIZE = X_SIZE
+Y_GRID_SIZE = Y_SIZE
 
 class TimeoutException(Exception):
     def __init__(self, msg=''):
@@ -53,6 +56,9 @@ class Game:
         self.world.generate_neighbors()
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
         self.turn = 0
+        
+        for _ in range(4):
+            self.place_food()
 
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
@@ -62,6 +68,10 @@ class Game:
 
     def render(self):
         self.screen.fill(WHITE)
+        
+        if self.turn & 7 == 0: # if turn % 8 == 0
+            self.place_food()
+            
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
         hives = []
@@ -72,13 +82,13 @@ class Game:
                     if tile.hive:
                         if tile.hive_index == -1:
                             tile.hive = False
-                            pygame.draw.rect(self.screen, BOARD,
+                            pygame.draw.rect(self.screen, FOOD if tile.food else BOARD,
                                              (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
                             hives.append([x, y, self.bots[tile.hive_index].hive_colour])
                     else:
-                        pygame.draw.rect(self.screen, BOARD,
+                        pygame.draw.rect(self.screen, FOOD if tile.food else BOARD,
                                          (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                           self.cell_size + 1, self.cell_size + 1))
         for hive in hives:
@@ -103,6 +113,7 @@ class Game:
                         bee.position.y = (bee.position.y - 1 + Y_SIZE) % Y_SIZE
                     elif action_data == 'W' and self.world.get_tile(bee.position.x - 1, bee.position.y).walkable:
                         bee.position.x = (bee.position.x - 1 + X_SIZE) % X_SIZE
+                self.world.tiles[bee.position.x][bee.position.y].food = False
         return [Bee(bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
 
     def do_bots(self):
@@ -144,6 +155,28 @@ class Game:
 
             i = i + 1
         self.turn = self.turn + 1
+        
+    def place_food(self):
+        skips = random.randint(0, 20)
+        x = random.randint(0, X_GRID_SIZE - 1)
+        y = random.randint(0, Y_GRID_SIZE - 1)
+        while True:
+            tile = self.world.get_tile(x,y)
+            if tile.walkable and not tile.was_hive:
+                if skips == 0:
+                    break
+                else:
+                    skips = skips - 1
+            x = x + 1
+            if x >= X_GRID_SIZE:
+                x = 0
+                y = y + 1
+                if y >= Y_GRID_SIZE:
+                    y = 0
+        
+        for x_g in range(X_GRIDS):
+            for y_g in range(Y_GRIDS):
+                self.world.tiles[x + x_g * X_GRID_SIZE][y + y_g * Y_GRID_SIZE].food = True
 
     def create_grid(self, w, h):
         grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
