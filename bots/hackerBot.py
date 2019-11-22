@@ -4,12 +4,11 @@ from class_data import *
 
 
 class AI:
-    def __init__(self, index, world):
+    def __init__(self, index):
         self.index = index
-        self.world = world
 
-    def do_turn(self, bees):
-        self.world.tiles.reverse()
+    def do_turn(self, world, bees):
+        world.tiles[random.randint(0, 15)][random.randint(0, 15)].walled = True
         for bee in bees:
             bee.position = bee.position.x + 1, bee.position.y + 1
             bee.action = "M N"

@@ -51,13 +51,13 @@ def timeout_limit(seconds=TIMEOUT):
 class Game:
     def __init__(self, w, h):
         self.world = World(w, h, self.create_grid(w, h))
-        self.bots = get_bots(self.world)
+        self.bots = get_bots()
         self.world.tiles = self.set_hives(w, h, self.world.tiles)
         self.world.generate_neighbors()
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
         self.turn = 0
         
-        for _ in range(4):
+        for _ in range(3):
             self.place_food()
 
     def resize_board(self, w, h):
@@ -124,7 +124,7 @@ class Game:
             if not self.bots[i].terminated:
                 try:
                     self.bots[i].bees = self.to_bees_and_action(self.bots[i].bees,
-                                        self.bots[i].ai.do_turn([BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
+                                        self.bots[i].ai.do_turn(self.world, [BeeUnit(bee.position, bee.health, bee.data) for bee in self.bots[i].bees]))
                 except TimeoutException as e:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
                 except Exception:
@@ -372,7 +372,7 @@ def randomize_grid(grid_template, w, h):
     return grid
 
 
-def get_bots(world):
+def get_bots():
     colours = [(255,100,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
                (148,255,181), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0), (255,80,5)]
@@ -385,7 +385,7 @@ def get_bots(world):
     bots = []
     for i in range(len(bot_names)):
         try:
-            bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i, world.copy())
+            bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
             bots.append(Bot(bot_names[i], bot_ai, colours.pop(0)))
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')

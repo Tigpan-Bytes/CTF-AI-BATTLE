@@ -76,15 +76,16 @@ class PriorityQueue:
 
 
 class World:
-    def __init__(self, width, height, tiles):
+    def __init__(self, width, height, tiles, neighbors=None):
         self.width = width
         self.half_width = int(width / 2)
         self.height = height
         self.half_height = int(height / 2)
         self.tiles = tiles
+        self.neighbors = neighbors
 
     def generate_neighbors(self):
-        neighbors = [[[] for y in range(self.height)] for x in range(self.width)]
+        self.neighbors=[[[] for y in range(self.height)] for x in range(self.width)]
         for x in range(self.width):
             for y in range(self.height):
                 directions = []
@@ -109,8 +110,7 @@ class World:
                         directions.append((0, -1))
                     if self.get_tile(x, y + 1).walkable:
                         directions.append((0, 1))
-                neighbors[x][y] = directions
-        return neighbors
+                self.neighbors[x][y] = directions
 
     def get_tile(self, x, y):
         return self.tiles[x % self.width][y % self.height]
@@ -205,11 +205,6 @@ class World:
                         path_from[next_pos] = (dir[0], dir[1])
                         frontier.enqueue(next_pos, new_cost + self.heuristic(target, next_pos))
         return None
-
-    def copy(self):
-        new_world = World(self.width, self.height, self.tiles.copy())
-        new_world.neighbors = new_world.generate_neighbors()
-        return new_world
     
     
     
