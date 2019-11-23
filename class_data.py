@@ -9,6 +9,7 @@ class Tile:
         self.was_hive = hive
         self.hive = hive
         self.hive_index = hive_index
+        self.bee = None
 
 
 class Bot:
@@ -20,17 +21,19 @@ class Bot:
         self.colour = colour
         self.hives = []
         self.bees = []
-
+        self.bee_action_units = []
 
 class Bee:
-    def __init__(self, position, health=4, data=''):
-        self.health = health
+    def __init__(self, index, position, health=4, data=''):
+        self.index = index
         self.position = position
+        self.health = health
         self.data = data
 
 
 class BeeUnit:
-    def __init__(self, position, health, data):
+    def __init__(self, index, position, health, data):
+        self.index = index
         self.health = health
         self.position = position
         self.data = data
