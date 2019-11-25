@@ -56,9 +56,12 @@ class Game:
         self.world.generate_neighbors()
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
         self.turn = 0
-        
+
         for _ in range(3):
             self.place_food()
+
+        for bot in self.bots:
+            bot.ai.world = self.world.copy()
 
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
@@ -99,11 +102,11 @@ class Game:
                              (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
-    def do_bees_actions(self, bees, bee_units):
-        for bee, unit in zip(bees, bee_units):
-            if len(unit.action) >= 3:
-                action = unit.action[0]
-                action_data = unit.action[2:]
+    def do_bees_actions(self, bees):
+        for bee in bees:
+            if len(bee.action) >= 3:
+                action = bee.action[0]
+                action_data = bee.action[2:]
                 self.world.tiles[bee.position.x][bee.position.y].bee = None
                 if action == 'M':
                     if action_data == 'N':
@@ -124,16 +127,19 @@ class Game:
                             bee.position = Position((bee.position.x - 1 + X_SIZE) % X_SIZE, bee.position.y)
                 self.world.tiles[bee.position.x][bee.position.y].bee = bee
                 self.world.tiles[bee.position.x][bee.position.y].food = False
-        return [Bee(bee.index, bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
 
     def do_bots(self):
+        # change world to be saved by bots and before getting their turn, update the food and bee
         bot_length = len(self.bots)
 
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated:
                 try:
-                    self.bots[i].bee_action_units = self.bots[i].ai.do_turn(self.world, [bee.copy() for bee in self.bots[i].bees])
+                    data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees])
+                    for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
+                        self.bots[i].bees[j].data = d_a[0]
+                        self.bots[i].bees[j].action = d_a[1]
                 except TimeoutException as e:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
                 except Exception:
@@ -151,7 +157,7 @@ class Game:
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated:
-                self.bots[i].bees = self.do_bees_actions(self.bots[i].bees, self.bots[i].bee_action_units)
+                self.do_bees_actions(self.bots[i].bees)
             i = i + 1
 
         i = 0
@@ -280,6 +286,7 @@ def create_grid(w, h):
                     x_i = (x_index + x + w) % w
                     y_i = (y_index + y + h) % h
                     grid[x_i][y_i] = Tile(grid_part[x][y].walkable,
+                                          grid_part[x][y].hive,
                                           grid_part[x][y].hive,
                                           -1)
 
