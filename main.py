@@ -104,15 +104,25 @@ class Game:
             if len(unit.action) >= 3:
                 action = unit.action[0]
                 action_data = unit.action[2:]
+                self.world.tiles[bee.position.x][bee.position.y].bee = None
                 if action == 'M':
-                    if action_data == 'N' and self.world.get_tile(bee.position.x, bee.position.y + 1).walkable:
-                        bee.position.y = (bee.position.y + 1) % Y_SIZE
-                    elif action_data == 'E' and self.world.get_tile(bee.position.x + 1, bee.position.y).walkable:
-                        bee.position.x = (bee.position.x + 1) % X_SIZE
-                    elif action_data == 'S' and self.world.get_tile(bee.position.x, bee.position.y - 1).walkable:
-                        bee.position.y = (bee.position.y - 1 + Y_SIZE) % Y_SIZE
-                    elif action_data == 'W' and self.world.get_tile(bee.position.x - 1, bee.position.y).walkable:
-                        bee.position.x = (bee.position.x - 1 + X_SIZE) % X_SIZE
+                    if action_data == 'N':
+                        tile = self.world.get_tile(bee.position.x, bee.position.y + 1)
+                        if tile.walkable and tile.bee is None:
+                            bee.position = Position(bee.position.x, (bee.position.y + 1) % Y_SIZE)
+                    elif action_data == 'E':
+                        tile = self.world.get_tile(bee.position.x + 1, bee.position.y)
+                        if tile.walkable and tile.bee is None:
+                            bee.position = Position((bee.position.x + 1) % Y_SIZE, bee.position.y)
+                    elif action_data == 'S':
+                        tile = self.world.get_tile(bee.position.x, bee.position.y - 1)
+                        if tile.walkable and tile.bee is None:
+                            bee.position = Position(bee.position.x, (bee.position.y - 1 + Y_SIZE) % Y_SIZE)
+                    elif action_data == 'W':
+                        tile = self.world.get_tile(bee.position.x - 1, bee.position.y)
+                        if tile.walkable and tile.bee is None:
+                            bee.position = Position((bee.position.x - 1 + X_SIZE) % X_SIZE, bee.position.y)
+                self.world.tiles[bee.position.x][bee.position.y].bee = bee
                 self.world.tiles[bee.position.x][bee.position.y].food = False
         return [Bee(bee.index, bee.position, bee.health, unit.data) for bee, unit in zip(bees, bee_units)]
 
@@ -123,7 +133,7 @@ class Game:
         while i < bot_length:
             if not self.bots[i].terminated:
                 try:
-                    self.bots[i].bee_action_units = self.bots[i].ai.do_turn(self.world, [BeeUnit(bee.index, bee.position, bee.health, bee.data) for bee in self.bots[i].bees])
+                    self.bots[i].bee_action_units = self.bots[i].ai.do_turn(self.world, [bee.copy() for bee in self.bots[i].bees])
                 except TimeoutException as e:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
                 except Exception:
@@ -200,10 +210,15 @@ class Game:
                         if grid[x_i][y_i].hive:
                             grid[x_i][y_i].hive_index = index
                             self.bots[i].bees.append(Bee(i, Position(x_i, y_i)))
+                            self.world.tiles[x_i][y_i].bee = self.bots[i].bees[-1]
                             self.bots[i].bees.append(Bee(i, Position(x_i + 1, y_i)))
+                            self.world.tiles[x_i + 1][y_i].bee = self.bots[i].bees[-1]
                             self.bots[i].bees.append(Bee(i, Position(x_i, y_i + 1)))
+                            self.world.tiles[x_i][y_i + 1].bee = self.bots[i].bees[-1]
                             self.bots[i].bees.append(Bee(i, Position(x_i - 1, y_i)))
+                            self.world.tiles[x_i - 1][y_i].bee = self.bots[i].bees[-1]
                             self.bots[i].bees.append(Bee(i, Position(x_i, y_i - 1)))
+                            self.world.tiles[x_i][y_i - 1].bee = self.bots[i].bees[-1]
                             self.bots[grid[x_i][y_i].hive_index].hives.append(grid[x_i][y_i])
                 i = i + 1
         return grid

@@ -7,7 +7,8 @@ class AI:
         self.index = index
 
     def do_turn(self, world, bees):
-        #i = 0
-        #while True:
-        #    i = (i + 1) % 5000
+        i = 0
+        for bee in bees:
+            if random.randint(0, 20) == 0:
+                bee.action = 'M ' + random.choice(['N','S','E','W'])
         return bees

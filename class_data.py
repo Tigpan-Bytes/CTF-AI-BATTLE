@@ -1,6 +1,8 @@
 from collections import deque
+from collections import namedtuple
 import heapq
 
+Position = namedtuple('Position', ['x', 'y'])
 
 class Tile:
     def __init__(self, walkable, hive=False, hive_index=-1):
@@ -29,21 +31,19 @@ class Bee:
         self.position = position
         self.health = health
         self.data = data
-
-
-class BeeUnit:
-    def __init__(self, index, position, health, data):
-        self.index = index
-        self.health = health
-        self.position = position
-        self.data = data
         self.action = ''
 
+    def copy(self):
+        return Bee(self.index, self.position, self.health, self.data)
 
-class Position:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+
+#class Position:
+#    def __init__(self, x, y):
+#        self.x = x
+#        self.y = y
+#
+#    def copy(self):
+#        return Position(self.x, self.y)
 
 class MovePosition:
     def __init__(self, x, y, direction):
