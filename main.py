@@ -33,7 +33,7 @@ Y_GRID_SIZE = Y_SIZE
 class TimeoutException(Exception):
     def __init__(self, msg=''):
         self.msg = msg
-        
+
 @contextmanager
 def timeout_limit(seconds=TIMEOUT):
     timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
@@ -45,8 +45,7 @@ def timeout_limit(seconds=TIMEOUT):
     finally:
         # if the action ends in specified time, timer is canceled
         timer.cancel()
-        
-        
+
 
 class Game:
     def __init__(self, w, h):
@@ -55,7 +54,10 @@ class Game:
         self.world.tiles = self.set_hives(w, h, self.world.tiles)
         self.world.generate_neighbors()
         self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
+
         self.turn = 0
+        self.food_changes = []
+        self.bee_changes = []
 
         for _ in range(3):
             self.place_food()
@@ -108,6 +110,7 @@ class Game:
                 action = bee.action[0]
                 action_data = bee.action[2:]
                 self.world.tiles[bee.position.x][bee.position.y].bee = None
+                self.bee_changes.append((None, bee.position.x, bee.position.y))
                 if action == 'M':
                     if action_data == 'N':
                         tile = self.world.get_tile(bee.position.x, bee.position.y + 1)
@@ -126,6 +129,9 @@ class Game:
                         if tile.walkable and tile.bee is None:
                             bee.position = Position((bee.position.x - 1 + X_SIZE) % X_SIZE, bee.position.y)
                 self.world.tiles[bee.position.x][bee.position.y].bee = bee
+                self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
+            if self.world.tiles[bee.position.x][bee.position.y].food:
+                self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
 
     def do_bots(self):
@@ -136,6 +142,7 @@ class Game:
         while i < bot_length:
             if not self.bots[i].terminated:
                 try:
+                    self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy())
                     data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees])
                     for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
                         self.bots[i].bees[j].data = d_a[0]
@@ -147,6 +154,9 @@ class Game:
                     print(" > Naughty details:", traceback.format_exc())
 
                     self.bots[i].terminated = True
+                    for bee in self.bots[i].bees:
+                        self.bee_changes.append((None, bee.position.x, bee.position.y))
+                        self.world.tiles[bee.position.x][bee.position.y].bee = None
                     self.bots[i].bees = []
                     for hive in self.bots[i].hives:
                         hive.hive = False
@@ -154,6 +164,7 @@ class Game:
                     self.bots[i].hives = []
             i = i + 1
 
+        self.food_changes = []
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated:
@@ -197,6 +208,7 @@ class Game:
         
         for x_g in range(X_GRIDS):
             for y_g in range(Y_GRIDS):
+                self.food_changes.append((True, x + x_g * X_GRID_SIZE, y + y_g * Y_GRID_SIZE))
                 self.world.tiles[x + x_g * X_GRID_SIZE][y + y_g * Y_GRID_SIZE].food = True
     
     def set_hives(self, w, h, grid):

@@ -8,10 +8,10 @@ class Tile:
     def __init__(self, walkable, hive=False, was_hive=False, hive_index=-1, food=False, bee=None):
         self.walkable = walkable
         self.hive = hive
-        self.was_hive = hive  or was_hive
+        self.was_hive = hive or was_hive
         self.hive_index = hive_index
         self.food = food
-        self.bee = bee
+        self.bee = bee  # possibly be a tuple (bot_index, index)
 
 
 class Bot:
@@ -83,7 +83,7 @@ class World:
         for x in range(self.width):
             for y in range(self.height):
                 tile = self.get_tile(x, y)
-                new_tiles[x][y] = Tile(tile.walkable, tile.hive, tile.was_hive, tile.hive_index, tile.food, tile.bee)
+                new_tiles[x][y] = Tile(tile.walkable, tile.hive, tile.was_hive, tile.hive_index, tile.food, None if tile.bee is None else tile.bee.copy())
         return World(self.width, self.height, new_tiles, self._neighbors.copy())
 
     def generate_neighbors(self):
