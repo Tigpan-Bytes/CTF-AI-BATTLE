@@ -19,7 +19,7 @@ FOOD = (207,230,140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
-TIMEOUT = 1
+TIMEOUT = 0.1
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -142,11 +142,12 @@ class Game:
         while i < bot_length:
             if not self.bots[i].terminated:
                 try:
-                    self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy())
-                    data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees])
-                    for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
-                        self.bots[i].bees[j].data = d_a[0]
-                        self.bots[i].bees[j].action = d_a[1]
+                    with timeout_limit():
+                        self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy())
+                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees])
+                        for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
+                            self.bots[i].bees[j].data = d_a[0]
+                            self.bots[i].bees[j].action = d_a[1]
                 except TimeoutException as e:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
                 except Exception:
