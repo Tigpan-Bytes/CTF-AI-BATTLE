@@ -166,6 +166,7 @@ class Game:
             i = i + 1
 
         self.food_changes = []
+        self.bee_changes = []
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated:
