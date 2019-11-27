@@ -108,26 +108,17 @@ class Game:
         for bee in bees:
             if len(bee.action) >= 3:
                 action = bee.action[0]
-                action_data = bee.action[2:]
                 self.world.tiles[bee.position.x][bee.position.y].bee = None
                 self.bee_changes.append((None, bee.position.x, bee.position.y))
                 if action == 'M':
-                    if action_data == 'N':
-                        tile = self.world.get_tile(bee.position.x, bee.position.y + 1)
-                        if tile.walkable and tile.bee is None:
-                            bee.position = Position(bee.position.x, (bee.position.y + 1) % Y_SIZE)
-                    elif action_data == 'E':
-                        tile = self.world.get_tile(bee.position.x + 1, bee.position.y)
-                        if tile.walkable and tile.bee is None:
-                            bee.position = Position((bee.position.x + 1) % Y_SIZE, bee.position.y)
-                    elif action_data == 'S':
-                        tile = self.world.get_tile(bee.position.x, bee.position.y - 1)
-                        if tile.walkable and tile.bee is None:
-                            bee.position = Position(bee.position.x, (bee.position.y - 1 + Y_SIZE) % Y_SIZE)
-                    elif action_data == 'W':
-                        tile = self.world.get_tile(bee.position.x - 1, bee.position.y)
-                        if tile.walkable and tile.bee is None:
-                            bee.position = Position((bee.position.x - 1 + X_SIZE) % X_SIZE, bee.position.y)
+                    x = get_dir_x(bee.action[2])
+                    y = get_dir_y(bee.action[2])
+                    
+                    tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
+                    if tile.walkable and tile.bee is None:
+                        bee.position = Position((bee.position.x + x) % X_SIZE, (bee.position.y + y) % Y_SIZE)
+                        
+                    bee.action = ''
                 self.world.tiles[bee.position.x][bee.position.y].bee = bee
                 self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
             if self.world.tiles[bee.position.x][bee.position.y].food:
@@ -246,6 +237,20 @@ class Game:
     def update(self):
         self.render()
         self.do_bots()
+        
+def get_dir_x(dir):
+    if dir == 'E':
+        return 1
+    if dir == 'W':
+        return -1
+    return 0
+
+def get_dir_y(dir):
+    if dir == 'N':
+        return 1
+    if dir == 'S':
+        return -1
+    return 0
 
 def create_grid(w, h):
     grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
