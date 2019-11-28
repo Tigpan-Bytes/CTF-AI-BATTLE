@@ -104,18 +104,51 @@ class Game:
                              (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
-    def do_bee_actions(self, bee, dir):
-
+    def do_bee_actions(self, bee, direction, other_bee):
+        # return 0 = false, 1 = true, 2 = deleted
         if len(bee.action) >= 3:
             action = bee.action[0]
             if action == 'M':
                 x = get_dir_x(bee.action[2])
                 y = get_dir_y(bee.action[2])
                 bee.action = ''
+                if x == 0 and y == 0:
+                    return 0
 
                 tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
                 if tile.walkable:
-                    if tile.bee is None or (not(-x != dir[0] and -y != dir[1]) and self.do_bee_actions(tile.bee, (x, y))):
+                    move = False
+                    if tile.bee is None:
+                        move = True
+                    else:
+                        bee_action = self.do_bee_actions(tile.bee, (x, y), bee)
+                        same_direction = (-x != direction[0] and -y != direction[1])
+                        if bee_action == 2:
+                            return 0
+                        elif not same_direction and bee_action == 1:
+                            move = True
+                        elif other_bee is not None and same_direction and other_bee.index != bee.index:
+                            # enemy bees are moving directly against each other or one cant move and the other moves into it
+                            self.bots[other_bee.index].bees.remove(other_bee)
+                            tile.bee = None
+                            self.bee_changes.append((None, other_bee.position.x, other_bee.position.y))
+                            
+                            self.bots[bee.index].bees.remove(bee)
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
+                            self.bee_changes.append((None, bee.position.x, bee.position.y))
+                            return 2
+                        elif bee_action == 0 and tile.bee.index != bee.index:
+                            # enemy bees are moving directly against each other or one cant move and the other moves into it
+                            self.bots[tile.bee.index].bees.remove(tile.bee)
+                            self.bee_changes.append((None, tile.bee.position.x, tile.bee.position.y))
+                            tile.bee = None
+                            
+                            self.bots[bee.index].bees.remove(bee)
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
+                            self.bee_changes.append((None, bee.position.x, bee.position.y))
+                            return 2
+                        
+                    if move:
                         self.world.tiles[bee.position.x][bee.position.y].bee = None
                         self.bee_changes.append((None, bee.position.x, bee.position.y))
 
@@ -123,8 +156,8 @@ class Game:
 
                         self.world.tiles[bee.position.x][bee.position.y].bee = bee
                         self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
-                        return True
-        return False
+                        return 1
+        return 0
 
     def check_bee_food(self, bees):
         for bee in bees:
@@ -169,7 +202,7 @@ class Game:
             for y in range(Y_SIZE):
                 tile = self.world.get_tile(x, y)
                 if tile.bee is not None:
-                    self.do_bee_actions(tile.bee, (0, 0))
+                    self.do_bee_actions(tile.bee, (0, 0), None)
 
         i = 0
         while i < bot_length:

@@ -12,7 +12,7 @@ class AI:
     def is_enemy_hive(self, position):
         tile = self.world.get_tile(position.x, position.y)
         #return tile.hive_index not in self.attacked_hives
-        return tile.food
+        return tile.bee is not None
 
     def update_tiles(self, food_changes, bee_changes):
         """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""

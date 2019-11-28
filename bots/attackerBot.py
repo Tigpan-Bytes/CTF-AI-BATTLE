@@ -32,6 +32,6 @@ class AI:
                     cell = self.world.get_tile(bee.position.x, bee.position.y)
                     if self.is_enemy_hive(bee.position):
                         self.attacked_hives.append(cell.hive_index)
-                        if len(self.attacked_hives) >= 7:
-                            self.attacked_hives.pop(random.randint(1,6))
+                        if len(self.attacked_hives) >= 8:
+                            self.attacked_hives.pop(random.randint(1,7))
         return [(bee.data, bee.action) for bee in bees]
