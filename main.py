@@ -19,7 +19,7 @@ FOOD = (207,230,140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
-TIMEOUT = 0.1
+TIMEOUT = 0.2
 
 X_SIZE = 32
 Y_SIZE = 32
@@ -104,23 +104,30 @@ class Game:
                              (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
-    def do_bees_actions(self, bees):
-        for bee in bees:
-            if len(bee.action) >= 3:
-                action = bee.action[0]
-                self.world.tiles[bee.position.x][bee.position.y].bee = None
-                self.bee_changes.append((None, bee.position.x, bee.position.y))
-                if action == 'M':
-                    x = get_dir_x(bee.action[2])
-                    y = get_dir_y(bee.action[2])
-                    
-                    tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
-                    if tile.walkable and tile.bee is None:
+    def do_bee_actions(self, bee, dir):
+
+        if len(bee.action) >= 3:
+            action = bee.action[0]
+            if action == 'M':
+                x = get_dir_x(bee.action[2])
+                y = get_dir_y(bee.action[2])
+                bee.action = ''
+
+                tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
+                if tile.walkable:
+                    if tile.bee is None or (not(-x != dir[0] and -y != dir[1]) and self.do_bee_actions(tile.bee, (x, y))):
+                        self.world.tiles[bee.position.x][bee.position.y].bee = None
+                        self.bee_changes.append((None, bee.position.x, bee.position.y))
+
                         bee.position = Position((bee.position.x + x) % X_SIZE, (bee.position.y + y) % Y_SIZE)
-                        
-                    bee.action = ''
-                self.world.tiles[bee.position.x][bee.position.y].bee = bee
-                self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
+
+                        self.world.tiles[bee.position.x][bee.position.y].bee = bee
+                        self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
+                        return True
+        return False
+
+    def check_bee_food(self, bees):
+        for bee in bees:
             if self.world.tiles[bee.position.x][bee.position.y].food:
                 self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
@@ -158,10 +165,16 @@ class Game:
 
         self.food_changes = []
         self.bee_changes = []
+        for x in range(X_SIZE):
+            for y in range(Y_SIZE):
+                tile = self.world.get_tile(x, y)
+                if tile.bee is not None:
+                    self.do_bee_actions(tile.bee, (0, 0))
+
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated:
-                self.do_bees_actions(self.bots[i].bees)
+                self.check_bee_food(self.bots[i].bees)
             i = i + 1
 
         i = 0
