@@ -12,6 +12,7 @@ class Tile:
         self.hive_index = hive_index
         self.food = food
         self.bee = bee  # possibly be a tuple (bot_index, index)
+        self.food_level = -1
 
 
 class Bot:
@@ -22,6 +23,7 @@ class Bot:
         self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
         self.colour = colour
         self.hives = []
+        self.hive_positions = []
         self.bees = []
         self.bee_action_units = []
 

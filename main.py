@@ -19,13 +19,15 @@ FOOD = (207,230,140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 
-TIMEOUT = 0.2
+TIMEOUT = 0.5
 
 X_SIZE = 32
 Y_SIZE = 32
 
 X_GRIDS = 3
 Y_GRIDS = 3
+
+HIVE_COUNT = 2
 
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
@@ -73,8 +75,8 @@ class Game:
 
     def render(self):
         self.screen.fill(WHITE)
-        
-        if self.turn & 7 == 0: # if turn % 8 == 0
+
+        if self.turn & 31 == 0: # if turn % 32 == 0
             self.place_food()
             
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
@@ -130,22 +132,22 @@ class Game:
                         elif other_bee is not None and same_direction and other_bee.index != bee.index:
                             # enemy bees are moving directly against each other or one cant move and the other moves into it
                             self.bots[other_bee.index].bees.remove(other_bee)
-                            tile.bee = None
                             self.bee_changes.append((None, other_bee.position.x, other_bee.position.y))
-                            
+                            self.world.tiles[other_bee.position.x][other_bee.position.y].bee = None
+
                             self.bots[bee.index].bees.remove(bee)
-                            self.world.tiles[bee.position.x][bee.position.y].bee = None
                             self.bee_changes.append((None, bee.position.x, bee.position.y))
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
                             return 2
-                        elif bee_action == 0 and tile.bee.index != bee.index:
+                        elif tile.bee is not None and bee_action == 0 and tile.bee.index != bee.index:
                             # enemy bees are moving directly against each other or one cant move and the other moves into it
                             self.bots[tile.bee.index].bees.remove(tile.bee)
                             self.bee_changes.append((None, tile.bee.position.x, tile.bee.position.y))
                             tile.bee = None
-                            
+
                             self.bots[bee.index].bees.remove(bee)
-                            self.world.tiles[bee.position.x][bee.position.y].bee = None
                             self.bee_changes.append((None, bee.position.x, bee.position.y))
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
                             return 2
                         
                     if move:
@@ -164,6 +166,8 @@ class Game:
             if self.world.tiles[bee.position.x][bee.position.y].food:
                 self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
+                for hive in self.bots[bee.index].hives:
+                    hive.food_level = hive.food_level + round(HIVE_COUNT / len(self.bots[bee.index].hives))
 
     def do_bots(self):
         # change world to be saved by bots and before getting their turn, update the food and bee
@@ -208,6 +212,21 @@ class Game:
         while i < bot_length:
             if not self.bots[i].terminated:
                 self.check_bee_food(self.bots[i].bees)
+            i = i + 1
+
+        i = 0
+        while i < bot_length:
+            if not self.bots[i].terminated:
+                j = 0
+                while j < len(self.bots[i].hives):
+                    hive = self.bots[i].hives[j]
+                    if hive.bee is None and hive.food_level > 0:
+                        hive.food_level = hive.food_level - 1
+                        new_bee = Bee(i, Position(self.bots[i].hive_positions[j].x, self.bots[i].hive_positions[j].y))
+                        self.bots[i].bees.append(new_bee)
+                        self.world.tiles[new_bee.position.x][new_bee.position.y].bee = new_bee
+                        self.bee_changes.append((new_bee.copy(), new_bee.position.x, new_bee.position.y))
+                    j = j + 1
             i = i + 1
 
         i = 0
@@ -266,6 +285,8 @@ class Game:
                             grid[x_i][y_i].hive = False
                         if grid[x_i][y_i].hive:
                             grid[x_i][y_i].hive_index = index
+                            grid[x_i][y_i].food_level = 0
+
                             self.bots[i].bees.append(Bee(i, Position(x_i, y_i)))
                             self.world.tiles[x_i][y_i].bee = self.bots[i].bees[-1]
                             self.bots[i].bees.append(Bee(i, Position(x_i + 1, y_i)))
@@ -277,6 +298,7 @@ class Game:
                             self.bots[i].bees.append(Bee(i, Position(x_i, y_i - 1)))
                             self.world.tiles[x_i][y_i - 1].bee = self.bots[i].bees[-1]
                             self.bots[grid[x_i][y_i].hive_index].hives.append(grid[x_i][y_i])
+                            self.bots[grid[x_i][y_i].hive_index].hive_positions.append(Position(x_i, y_i))
                 i = i + 1
         return grid
 
