@@ -76,7 +76,7 @@ class Game:
     def render(self):
         self.screen.fill(WHITE)
 
-        if self.turn & 31 == 0: # if turn % 32 == 0
+        if self.turn & 7 == 0: # if turn % 8 == 0
             self.place_food()
             
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
