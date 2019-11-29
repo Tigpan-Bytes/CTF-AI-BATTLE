@@ -21,7 +21,7 @@ class AI:
     def is_enemy_hive(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
         #return tile.hive_index not in self.attacked_hives
-        return tile.food or (tile.bee is not None and tile.bee.index != self.index and distance < 12)
+        return tile.food or (tile.bee is not None and tile.bee.index != self.index and distance < 30)
 
     def update_tiles(self, food_changes, bee_changes):
         """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""
@@ -35,7 +35,7 @@ class AI:
             if bee.data == '':
                 bee.data = str(random.randint(0, 3))
 
-            path = self.world.breadth_search(bee.position, self.is_enemy_hive, 24)
+            path = self.world.breadth_search(bee.position, self.is_enemy_hive, 30)
             if path is not None and len(path.direction) >= 1:
                 bee.action = 'M ' + path.direction[0]
             else:

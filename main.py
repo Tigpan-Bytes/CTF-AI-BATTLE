@@ -13,6 +13,15 @@ from os.path import isfile, join
 import pygame
 from class_data import *
 
+# TODO List:
+# 1. Implement attacking ('A' action).
+# 2. Implement lower health in collision wins.
+# 3. Implement removal of hives (when stepped on remove).
+# 4. Implement gui for bot stats.
+# 5. Implement win/loss and points.
+# 6. Balance, optimize, quality of life.
+# ???. Profit.
+
 WHITE = (255, 255, 255)
 BOARD = (191,174,158)
 FOOD = (207,230,140)
