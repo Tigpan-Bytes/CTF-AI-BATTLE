@@ -9,9 +9,9 @@ class AI:
         self.index = index
         self.attacked_hives = [index]
 
-    def is_enemy_hive(self, position):
+    def is_enemy_hive(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
-        return tile.hive_index not in self.attacked_hives
+        return tile.hive and (tile.hive_index not in self.attacked_hives)
 
     def update_tiles(self, food_changes, bee_changes):
         """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""
@@ -30,8 +30,8 @@ class AI:
                     bee.action = 'M ' + path.direction[0]
                 else:
                     cell = self.world.get_tile(bee.position.x, bee.position.y)
-                    if self.is_enemy_hive(bee.position):
+                    if self.is_enemy_hive(bee.position, 0):
                         self.attacked_hives.append(cell.hive_index)
-                        if len(self.attacked_hives) >= 8:
-                            self.attacked_hives.pop(random.randint(1,7))
+                        if len(self.attacked_hives) >= 7:
+                            self.attacked_hives.pop(random.randint(1,6))
         return [(bee.data, bee.action) for bee in bees]

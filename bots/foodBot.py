@@ -2,6 +2,15 @@ import random
 import math
 from class_data import *
 
+def get_state_xy(state):
+    if state == '0':
+        return 0, 1, 'N'
+    elif state == '1':
+        return 1, 0, 'E'
+    elif state == '2':
+        return 0, -1, 'S'
+    else:
+        return -1, 0, 'W'
 
 class AI:
     def __init__(self, index):
@@ -9,10 +18,10 @@ class AI:
         self.index = index
         self.attacked_hives = [index]
 
-    def is_enemy_hive(self, position):
+    def is_enemy_hive(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
         #return tile.hive_index not in self.attacked_hives
-        return tile.food
+        return tile.food or (tile.bee is not None and tile.bee.index != self.index and distance < 12)
 
     def update_tiles(self, food_changes, bee_changes):
         """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""
@@ -23,16 +32,19 @@ class AI:
 
     def do_turn(self, bees):
         for bee in bees:
-            if random.randint(0, 10) == 0:
-                bee.action = 'M ' + random.choice(['N','E','S','W'])
+            if bee.data == '':
+                bee.data = str(random.randint(0, 3))
+
+            path = self.world.breadth_search(bee.position, self.is_enemy_hive, 24)
+            if path is not None and len(path.direction) >= 1:
+                bee.action = 'M ' + path.direction[0]
             else:
-                path = self.world.breadth_search(bee.position, self.is_enemy_hive)
-                if path is not None and len(path.direction) >= 1:
-                    bee.action = 'M ' + path.direction[0]
-                #else:
-                    #cell = self.world.get_tile(bee.position.x, bee.position.y)
-                    #if self.is_enemy_hive(bee.position):
-                    #    self.attacked_hives.append(cell.hive_index)
-                    #    if len(self.attacked_hives) >= 5:
-                    #        self.attacked_hives.pop(random.randint(1,4))
+                while True:
+                    if random.randint(0, 5) == 0:
+                        bee.data = str(random.randint(0, 3))
+                    xya = get_state_xy(bee.data)
+                    if self.world.get_tile(bee.position.x + xya[0], bee.position.y + xya[1]).walkable:
+                        bee.action = 'M ' + xya[2]
+                        break
+                    bee.data = str(random.randint(0, 3))
         return [(bee.data, bee.action) for bee in bees]

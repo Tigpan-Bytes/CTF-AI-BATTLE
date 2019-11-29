@@ -137,7 +137,7 @@ class World:
             dequeued = frontier.dequeue()
             current = dequeued[0]
 
-            if target_func(Position(current[0], current[1])):
+            if target_func(Position(current[0], current[1]), dequeued[1]):
                 path = ''
                 current_position = current
                 next_movement = path_from[current_position]
@@ -151,7 +151,8 @@ class World:
                     if next_movement == (-1, 0):
                         path = 'W' + path
                     current_position = ((current_position[0] - next_movement[0] + self.width) % self.width,
-                                        (current_position[1] - next_movement[1] + self.height) % self.height)
+                                        (current_position[1] - next_movement[
+                                            1] + self.height) % self.height)
                     next_movement = path_from[current_position]
 
                 return MovePosition(current[0], current[1], path)
@@ -160,6 +161,7 @@ class World:
                 cost = dequeued[1] + 1
                 if cost < max_distance:
                     new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
+
                     if new_pos not in path_from:
                         path_from[new_pos] = (dir[0], dir[1])
                         frontier.enqueue((new_pos, cost))

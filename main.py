@@ -504,6 +504,9 @@ def get_bots():
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())
+
+    for i in range(len(bots)):
+        print('Bot index [' + str(i) + '] is ' + str(bots[i].name))
     return bots
 
 
