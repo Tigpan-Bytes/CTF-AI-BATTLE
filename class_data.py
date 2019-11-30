@@ -157,9 +157,9 @@ class World:
 
                 return MovePosition(current[0], current[1], path)
 
-            for dir in self._neighbors[current[0]][current[1]]:
-                cost = dequeued[1] + 1
-                if cost < max_distance:
+            cost = dequeued[1] + 1
+            if cost <= max_distance:
+                for dir in self._neighbors[current[0]][current[1]]:
                     new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
 
                     if new_pos not in path_from:
@@ -167,7 +167,7 @@ class World:
                         frontier.enqueue((new_pos, cost))
         return None
 
-    def heuristic(self, a, b_tuple):
+    def manhattan(self, a, b_tuple):
         x = abs(a.x - b_tuple[0])
         if x > self.half_width:
             x = self.width - x
@@ -212,6 +212,6 @@ class World:
                     if self.get_tile(next_pos[0], next_pos[1]).walkable and (next_pos not in cost_at or new_cost < cost_at[next_pos]):
                         cost_at[next_pos] = new_cost
                         path_from[next_pos] = (dir[0], dir[1])
-                        frontier.enqueue(next_pos, new_cost + self.heuristic(target, next_pos))
+                        frontier.enqueue(next_pos, new_cost + self.manhattan(target, next_pos))
         return None
     

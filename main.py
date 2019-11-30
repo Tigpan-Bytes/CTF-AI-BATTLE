@@ -14,13 +14,13 @@ import pygame
 from class_data import *
 
 # TODO List:
-# 1. Implement attacking ('A' action).
-# 2. Implement lower health in collision wins.
-# 3. Implement removal of hives (when stepped on remove).
-# 4. Implement gui for bot stats.
-# 5. Implement win/loss and points.
-# 6. Balance, optimize, quality of life.
-# ???. Profit.
+# [X] 1. Implement attacking ('A' action).
+# [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE***
+# [ ] 3. Implement removal of hives (when stepped on remove).
+# [ ] 4. Implement gui for bot stats.
+# [ ] 5. Implement win/loss and points.
+# [ ] 6. Balance, optimize, quality of life.
+# ?!?!?. Profit.
 
 WHITE = (255, 255, 255)
 BOARD = (191,174,158)
@@ -37,6 +37,7 @@ X_GRIDS = 3
 Y_GRIDS = 3
 
 HIVE_COUNT = 2
+BEE_RANGE = 3
 
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
@@ -115,59 +116,79 @@ class Game:
                              (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
-    def do_bee_actions(self, bee, direction, other_bee):
-        # return 0 = false, 1 = true, 2 = deleted
-        if len(bee.action) >= 3:
-            action = bee.action[0]
-            if action == 'M':
-                x = get_dir_x(bee.action[2])
-                y = get_dir_y(bee.action[2])
-                bee.action = ''
-                if x == 0 and y == 0:
-                    return 0
+    def do_bee_attack(self, bee):
+        if len(bee.action) >= 3 and bee.action[0] == 'A':
+            bee.action = bee.action[2:]
+            split = bee.action.split(',')
+            x = int(split[0])
+            y = int(split[1])
+            bee.action = ''
 
-                tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
-                if tile.walkable:
-                    move = False
-                    if tile.bee is None:
+            if self.world.manhattan(bee.position, (x,y)) <= BEE_RANGE and (bee.position.x != x or bee.position.y != y):
+                tile = self.world.get_tile(x, y)
+                if tile.bee:
+                    tile.bee.health = tile.bee.health - 1
+                    self.bee_changes.append((tile.bee.copy(), x, y))
+                if tile.food:
+                    tile.food = False
+                    self.food_changes.append((False, x, y))
+                    bee.health = 0
+
+    def do_bee_movement(self, bee, direction, other_bee):
+        # return 0 = false, 1 = true, 2 = deleted
+        if len(bee.action) >= 3 and bee.action[0] == 'M':
+            x = get_dir_x(bee.action[2])
+            y = get_dir_y(bee.action[2])
+            bee.action = ''
+            if x == 0 and y == 0:
+                return 0
+
+            tile = self.world.get_tile(bee.position.x + x, bee.position.y + y)
+            if tile.walkable:
+                move = False
+                if tile.bee is None:
+                    move = True
+                else:
+                    bee_action = self.do_bee_movement(tile.bee, (x, y), bee)
+                    same_direction = (-x != direction[0] and -y != direction[1])
+                    if bee_action == 2:
+                        return 0
+                    elif not same_direction and bee_action == 1:
                         move = True
-                    else:
-                        bee_action = self.do_bee_actions(tile.bee, (x, y), bee)
-                        same_direction = (-x != direction[0] and -y != direction[1])
-                        if bee_action == 2:
-                            return 0
-                        elif not same_direction and bee_action == 1:
-                            move = True
-                        elif other_bee is not None and same_direction and other_bee.index != bee.index:
-                            # enemy bees are moving directly against each other or one cant move and the other moves into it
+                    elif other_bee is not None and same_direction and other_bee.index != bee.index:
+                        # enemy bees are moving directly against each other or one cant move and the other moves into it
+                        if bee.health <= other_bee.health:
+                            self.bots[bee.index].bees.remove(bee)
+                            self.bee_changes.append((None, bee.position.x, bee.position.y))
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
+
+                        if other_bee.health >= bee.health:
                             self.bots[other_bee.index].bees.remove(other_bee)
                             self.bee_changes.append((None, other_bee.position.x, other_bee.position.y))
                             self.world.tiles[other_bee.position.x][other_bee.position.y].bee = None
-
+                        return 2
+                    elif tile.bee is not None and bee_action == 0 and tile.bee.index != bee.index:
+                        # enemy bees are moving directly against each other or one cant move and the other moves into it
+                        if bee.health >= tile.bee.health:
                             self.bots[bee.index].bees.remove(bee)
                             self.bee_changes.append((None, bee.position.x, bee.position.y))
                             self.world.tiles[bee.position.x][bee.position.y].bee = None
-                            return 2
-                        elif tile.bee is not None and bee_action == 0 and tile.bee.index != bee.index:
-                            # enemy bees are moving directly against each other or one cant move and the other moves into it
+
+                        if tile.bee.health >= bee.health:
                             self.bots[tile.bee.index].bees.remove(tile.bee)
                             self.bee_changes.append((None, tile.bee.position.x, tile.bee.position.y))
                             tile.bee = None
+                        return 2
+                    
+                if move:
+                    self.world.tiles[bee.position.x][bee.position.y].bee = None
+                    self.bee_changes.append((None, bee.position.x, bee.position.y))
 
-                            self.bots[bee.index].bees.remove(bee)
-                            self.bee_changes.append((None, bee.position.x, bee.position.y))
-                            self.world.tiles[bee.position.x][bee.position.y].bee = None
-                            return 2
-                        
-                    if move:
-                        self.world.tiles[bee.position.x][bee.position.y].bee = None
-                        self.bee_changes.append((None, bee.position.x, bee.position.y))
+                    bee.position = Position((bee.position.x + x) % X_SIZE, (bee.position.y + y) % Y_SIZE)
 
-                        bee.position = Position((bee.position.x + x) % X_SIZE, (bee.position.y + y) % Y_SIZE)
-
-                        self.world.tiles[bee.position.x][bee.position.y].bee = bee
-                        self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
-                        return 1
+                    self.world.tiles[bee.position.x][bee.position.y].bee = bee
+                    self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
+                    return 1
         return 0
 
     def check_bee_food(self, bees):
@@ -211,11 +232,33 @@ class Game:
 
         self.food_changes = []
         self.bee_changes = []
+
+        i = 0
+        while i < bot_length:
+            if not self.bots[i].terminated:
+                for bee in self.bots[i].bees:
+                    self.do_bee_attack(bee)
+            i = i + 1
+
+        i = 0
+        while i < bot_length:
+            if not self.bots[i].terminated:
+                j = 0
+                while j < len(self.bots[i].bees):
+                    bee = self.bots[i].bees[j]
+                    if bee.health <= 0:
+                        self.world.tiles[bee.position.x][bee.position.y].bee = None
+                        self.bee_changes.append((None, bee.position.x, bee.position.y))
+                        del self.bots[i].bees[j]
+                        j = j - 1
+                    j = j + 1
+            i = i + 1
+
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
                 tile = self.world.get_tile(x, y)
                 if tile.bee is not None:
-                    self.do_bee_actions(tile.bee, (0, 0), None)
+                    self.do_bee_movement(tile.bee, (0, 0), None)
 
         i = 0
         while i < bot_length:
@@ -498,7 +541,7 @@ def randomize_grid(grid_template, w, h):
 def get_bots():
     colours = [(255,100,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
                (148,255,181), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
-               (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0), (255,80,5)]
+               (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
     random.shuffle(colours)
 
     bot_path = './bots'

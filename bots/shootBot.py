@@ -2,6 +2,7 @@ import random
 import math
 from class_data import *
 
+
 def get_state_xy(state):
     if state == '0':
         return 0, 1, 'N'
@@ -12,16 +13,16 @@ def get_state_xy(state):
     else:
         return -1, 0, 'W'
 
+
 class AI:
     def __init__(self, index):
         self.world = None
         self.index = index
-        self.attacked_hives = [index]
 
-    def is_enemy_hive(self, position, distance):
+    def shoot_bee(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
-        #return tile.hive_index not in self.attacked_hives
-        return tile.food or (tile.bee is not None and tile.bee.index != self.index and distance < 30)
+        # return tile.hive_index not in self.attacked_hives
+        return tile.bee is not None and tile.bee.index != self.index
 
     def update_tiles(self, food_changes, bee_changes):
         """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""
@@ -35,9 +36,9 @@ class AI:
             if bee.data == '':
                 bee.data = str(random.randint(0, 3))
 
-            path = self.world.breadth_search(bee.position, self.is_enemy_hive, 30)
+            path = self.world.breadth_search(bee.position, self.shoot_bee, 3)
             if path is not None and len(path.direction) >= 1:
-                bee.action = 'M ' + path.direction[0]
+                bee.action = 'A ' + str(path.x) + ',' + str(path.y)
             else:
                 while True:
                     if random.randint(0, 5) == 0:
