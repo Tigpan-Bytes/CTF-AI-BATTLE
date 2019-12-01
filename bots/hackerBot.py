@@ -2,7 +2,6 @@ import random
 import math
 from class_data import *
 
-
 class AI:
     def __init__(self, index):
         self.world = None
@@ -21,10 +20,8 @@ class AI:
             self.world.get_tile(change.x, change.y).hive_index = -1
 
     def do_turn(self, bees, enemies): # enemies[i][0] is index, enemies[i][1] is hive_positions, enemies[i][2] is bee count
+        self.world.tiles[random.randint(0, 15)][random.randint(0, 15)] = None
         for bee in bees:
-            if bee.data == '':
-                bee.data = self.world.depth_search(bee.position, Position(32 * random.randint(0, 2), 32 * random.randint(0, 2))).direction
-            if bee.data != '':
-                bee.action = 'M ' + bee.data[0]
-                bee.data = bee.data[1:]
+            bee.position = Position(bee.position.x + 1, bee.position.y + 1)
+            bee.action = "M N"
         return [(bee.data, bee.action) for bee in bees]

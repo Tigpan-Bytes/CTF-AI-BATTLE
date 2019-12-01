@@ -21,21 +21,26 @@ class AI:
     def is_enemy_or_food(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
         #return tile.hive_index not in self.attacked_hives
-        return tile.food or (tile.bee is not None and tile.bee.index != self.index )
+        return tile.food or (tile.bee is not None and tile.bee.index != self.index) or (tile.hive and tile.hive_index != self.index)
 
     def shoot_bee(self, position, distance):
         tile = self.world.get_tile(position.x, position.y)
         # return tile.hive_index not in self.attacked_hives
         return tile.bee is not None and tile.bee.index != self.index
 
-    def update_tiles(self, food_changes, bee_changes):
-        """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing"""
+    def update_tiles(self, food_changes, bee_changes, lost_hive_changes):
+        """It is not recommended to change this function unless you are ABSOLUTELY sure you know what you are doing.
+        This is called once before asking for actions with all the data from the previous round. Then again if a bot was terminated
+        containing only the data for the terminated bots (bots that had a runtime error)."""
         for change in food_changes:
             self.world.get_tile(change[1], change[2]).food = change[0]
         for change in bee_changes:
             self.world.get_tile(change[1], change[2]).bee = change[0]
+        for change in lost_hive_changes:
+            self.world.get_tile(change.x, change.y).hive = False
+            self.world.get_tile(change.x, change.y).hive_index = -1
 
-    def do_turn(self, bees):
+    def do_turn(self, bees, enemies): # enemies[i][0] is index, enemies[i][1] is hive_positions, enemies[i][2] is bee count
         for bee in bees:
             if bee.data == '':
                 bee.data = str(random.randint(0, 3))

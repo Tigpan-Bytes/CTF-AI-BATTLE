@@ -15,8 +15,8 @@ from class_data import *
 
 # TODO List:
 # [X] 1. Implement attacking ('A' action).
-# [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE***
-# [ ] 3. Implement removal of hives (when stepped on remove).
+# [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE*** ***Mostly balanced***
+# [X] 3. Implement removal of hives (when stepped on remove).
 # [ ] 4. Implement gui for bot stats.
 # [ ] 5. Implement win/loss and points.
 # [ ] 6. Balance, optimize, quality of life.
@@ -27,6 +27,7 @@ BOARD = (191,174,158)
 FOOD = (207,230,140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
+WAS_BLACK = (140, 130, 120)
 
 TIMEOUT = 0.5
 
@@ -70,6 +71,7 @@ class Game:
         self.turn = 0
         self.food_changes = []
         self.bee_changes = []
+        self.eliminated_changes = []
 
         for _ in range(3):
             self.place_food()
@@ -92,6 +94,7 @@ class Game:
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
         hives = []
+        was_hives = []
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
                 tile = self.world.get_tile(x,y)
@@ -99,11 +102,13 @@ class Game:
                     if tile.hive:
                         if tile.hive_index == -1:
                             tile.hive = False
-                            pygame.draw.rect(self.screen, FOOD if tile.food else BOARD,
+                            pygame.draw.rect(self.screen, BOARD,
                                              (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
                             hives.append([x, y, self.bots[tile.hive_index].hive_colour])
+                    elif tile.was_hive:
+                        was_hives.append([x, y])
                     else:
                         pygame.draw.rect(self.screen, FOOD if tile.food else BOARD,
                                          (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
@@ -114,6 +119,16 @@ class Game:
                               self.cell_size + 5, self.cell_size + 5))
             pygame.draw.rect(self.screen, hive[2],
                              (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
+                              self.cell_size + 1, self.cell_size + 1))
+
+        for hive in was_hives:
+            pygame.draw.rect(self.screen, WAS_BLACK,
+                             (hive[0] * self.cell_size + self.x_plus - 1,
+                              (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size - 1,
+                              self.cell_size + 3, self.cell_size + 3))
+            pygame.draw.rect(self.screen, BOARD,
+                             (hive[0] * self.cell_size + self.x_plus,
+                              (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
     def do_bee_attack(self, bee):
@@ -129,10 +144,15 @@ class Game:
                 if tile.bee:
                     tile.bee.health = tile.bee.health - 1
                     self.bee_changes.append((tile.bee.copy(), x, y))
-                if tile.food:
+                    bee.action_success = True
+                elif tile.food:
                     tile.food = False
                     self.food_changes.append((False, x, y))
                     bee.health = 0
+                else:
+                    print('no b')
+            else:
+                print('far or sam')
 
     def do_bee_movement(self, bee, direction, other_bee):
         # return 0 = false, 1 = true, 2 = deleted
@@ -185,7 +205,30 @@ class Game:
                     self.bee_changes.append((None, bee.position.x, bee.position.y))
 
                     bee.position = Position((bee.position.x + x) % X_SIZE, (bee.position.y + y) % Y_SIZE)
+                    bee.action_success = True
 
+                    tile = self.world.tiles[bee.position.x][bee.position.y]
+                    if tile.hive and tile.hive_index != bee.index:
+                        i = 0
+                        while i < len(self.bots[tile.hive_index].hives):
+                            if tile == self.bots[tile.hive_index].hives[i]:
+                                break
+                            i = i + 1
+
+                        self.eliminated_changes.append(self.bots[tile.hive_index].hive_positions.pop(i))
+                        self.bots[tile.hive_index].hives.pop(i)
+                        tile.hive = False
+
+                        if len(self.bots[tile.hive_index].hives) == 0:
+                            print('Turn ' + str(self.turn) + ': Bot index [' + str(tile.hive_index) + '] '
+                                  '(' + self.bots[tile.hive_index].name + ') lost all hives, they are eliminated.')
+                            for kill_bee in self.bots[tile.hive_index].bees:
+                                self.bee_changes.append((None, kill_bee.position.x, kill_bee.position.y))
+                                self.world.tiles[kill_bee.position.x][kill_bee.position.y].bee = None
+                            self.bots[tile.hive_index].bees = []
+                            self.bots[tile.hive_index].lost = True
+
+                        tile.hive_index = -1
                     self.world.tiles[bee.position.x][bee.position.y].bee = bee
                     self.bee_changes.append((bee.copy(), bee.position.x, bee.position.y))
                     return 1
@@ -199,17 +242,29 @@ class Game:
                 for hive in self.bots[bee.index].hives:
                     hive.food_level = hive.food_level + round(HIVE_COUNT / len(self.bots[bee.index].hives))
 
+    def get_enemy_list(self, index):
+        enemies = []
+        i = 0
+        while i < len(self.bots):
+            if i != index and not self.bots[i].terminated and not self.bots[i].lost:
+                enemies.append([i, self.bots[i].hive_positions.copy(), len(self.bots[i].bees)])
+            i = i + 1
+        return enemies
+
     def do_bots(self):
         # change world to be saved by bots and before getting their turn, update the food and bee
         bot_length = len(self.bots)
 
         i = 0
+        terminated_bee_changes = []
+        terminated_hive_changes = []
+        any_terminations = False
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 try:
                     with timeout_limit():
-                        self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy())
-                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees])
+                        self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy(), self.eliminated_changes.copy())
+                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees], self.get_enemy_list(i))
                         for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
                             self.bots[i].bees[j].data = d_a[0]
                             self.bots[i].bees[j].action = d_a[1]
@@ -219,30 +274,64 @@ class Game:
                     print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
                     print(" > Naughty details:", traceback.format_exc())
 
+                    any_terminations = True
                     self.bots[i].terminated = True
                     for bee in self.bots[i].bees:
-                        self.bee_changes.append((None, bee.position.x, bee.position.y))
+                        terminated_bee_changes.append((None, bee.position.x, bee.position.y))
                         self.world.tiles[bee.position.x][bee.position.y].bee = None
                     self.bots[i].bees = []
-                    for hive in self.bots[i].hives:
+                    for hive, pos in zip(self.bots[i].hives, self.bots[i].hive_positions):
+                        terminated_hive_changes.append(pos)
                         hive.hive = False
                         hive.hive_index = -1
                     self.bots[i].hives = []
             i = i + 1
 
+        while any_terminations:
+            any_terminations = False
+            i = 0
+            while i < bot_length:
+                if not self.bots[i].terminated and not self.bots[i].lost:
+                    try:
+                        with timeout_limit(TIMEOUT / 5):
+                            self.bots[i].ai.update_tiles([].copy(), terminated_bee_changes.copy(), terminated_hive_changes.copy())
+                    except TimeoutException as e:
+                        print('Turn ' + str(self.turn) + '.5: Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                    except Exception:
+                        print('Turn ' + str(self.turn) + '.5: Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                        print(" > Naughty details:", traceback.format_exc())
+
+                        any_terminations = True
+                        self.bots[i].terminated = True
+                        for bee in self.bots[i].bees:
+                            terminated_bee_changes.append((None, bee.position.x, bee.position.y))
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
+                        self.bots[i].bees = []
+                        for hive, pos in zip(self.bots[i].hives, self.bots[i].hive_positions):
+                            terminated_hive_changes.append(pos)
+                            hive.hive = False
+                            hive.hive_index = -1
+                        self.bots[i].hives = []
+                i = i + 1
+
         self.food_changes = []
         self.bee_changes = []
+        self.eliminated_changes = []
+
+        for bot in self.bots:
+            for bee in bot.bees:
+                bee.action_success = False
 
         i = 0
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 for bee in self.bots[i].bees:
                     self.do_bee_attack(bee)
             i = i + 1
 
         i = 0
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 j = 0
                 while j < len(self.bots[i].bees):
                     bee = self.bots[i].bees[j]
@@ -262,16 +351,18 @@ class Game:
 
         i = 0
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 self.check_bee_food(self.bots[i].bees)
             i = i + 1
 
         i = 0
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 j = 0
                 while j < len(self.bots[i].hives):
                     hive = self.bots[i].hives[j]
+                    if hive.food_level > 10:
+                        hive.food_level = 10
                     if hive.bee is None and hive.food_level > 0:
                         hive.food_level = hive.food_level - 1
                         new_bee = Bee(i, Position(self.bots[i].hive_positions[j].x, self.bots[i].hive_positions[j].y))
@@ -283,7 +374,7 @@ class Game:
 
         i = 0
         while i < bot_length:
-            if not self.bots[i].terminated:
+            if not self.bots[i].terminated and not self.bots[i].lost:
                 for bee in self.bots[i].bees:
                     pygame.draw.polygon(self.screen, self.bots[i].colour,
                                         [(bee.position.x * self.cell_size + self.x_plus + 1,

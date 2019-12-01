@@ -19,6 +19,7 @@ class Bot:
     def __init__(self, name, ai, colour):
         self.name = name
         self.terminated = False
+        self.lost = False
         self.ai = ai
         self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
         self.colour = colour
@@ -28,15 +29,16 @@ class Bot:
         self.bee_action_units = []
 
 class Bee:
-    def __init__(self, index, position, health=4, data=''):
+    def __init__(self, index, position, health=5, data='', action_success=True):
         self.index = index
         self.position = position
         self.health = health
         self.data = data
         self.action = ''
+        self.action_success = action_success
 
     def copy(self):
-        return Bee(self.index, self.position, self.health, self.data)
+        return Bee(self.index, self.position, self.health, self.data, self.action_success)
 
 class MovePosition:
     def __init__(self, x, y, direction):
@@ -69,6 +71,9 @@ class PriorityQueue:
 
     def dequeue(self):
         return heapq.heappop(self.elements)
+
+    def to_list(self):
+        return [e[0] for e in self.elements]
 
 
 class World:
@@ -119,16 +124,80 @@ class World:
     def get_tile(self, x, y):
         return self.tiles[x % self.width][y % self.height]
 
-    def get_directions(self, x, y):
-        if (x + y) & 1 == 0:
-            return [(0, 1, 'N'), (0, -1, 'S'), (1, 0, 'E'), (-1, 0, 'W')]
-        return [(-1, 0, 'W'), (1, 0, 'E'), (0, -1, 'S'), (0, 1, 'N')]
+    def get_x_in_range(self, start, target_func, max_distance, sort_func=None):
+        """Returns a list of the positions of all locations that meet the target_func criteria"""
+        if sort_func is None:
+            targets = []
+            for x in range(-max_distance, max_distance + 1):
+                for y in range(-max_distance, max_distance + 1):
+                    distance = abs(x) + abs(y)
+                    if distance > max_distance:
+                        continue
+                    pos = Position(start.x + x, start.y + y)
+                    if target_func(pos, distance):
+                        targets.append(pos)
+            return targets
+        else:
+            targets = PriorityQueue()
+            for x in range(-max_distance, max_distance + 1):
+                for y in range(-max_distance, max_distance + 1):
+                    distance = abs(x) + abs(y)
+                    if distance > max_distance:
+                        continue
+                    pos = Position(start.x + x, start.y + y)
+                    if target_func(pos, distance):
+                        targets.enqueue(sort_func(pos, distance), pos)
+            return targets.to_list()
+
+    def breadth_path(self, start, max_distance=5318008):
+        frontier = Queue()
+        path_from = {}
+        path_dirs = {}
+
+        if isinstance(start, list):
+            for pos in start:
+                frontier.enqueue((pos, 0))
+
+                path_from[pos] = (0, 0)
+                path_dirs[pos] = ''
+        else:
+            frontier.enqueue((start, 0))
+
+            path_from[start] = (0, 0)
+            path_dirs[start] = ''
+
+        if max_distance <= 0:
+            max_distance = 5318008
+
+        while not frontier.empty():
+            dequeued = frontier.dequeue()
+            current = dequeued[0]
+
+            cost = dequeued[1] + 1
+            if cost <= max_distance:
+                for dir in self._neighbors[current.x][current.y]:
+                    new_pos = Position((current.x + dir[0] + self.width) % self.width, (current.y + dir[1] + self.height) % self.height)
+
+                    if new_pos not in path_from:
+                        path_from[new_pos] = (dir[0], dir[1])
+                        if dir == (0, -1):
+                            path_dirs[new_pos] = 'N'
+                        if dir == (-1, 0):
+                            path_dirs[new_pos] = 'E'
+                        if dir == (0, 1):
+                            path_dirs[new_pos] = 'S'
+                        if dir == (1, 0):
+                            path_dirs[new_pos] = 'W'
+                        frontier.enqueue((new_pos, cost))
+
+        return path_dirs
 
     def breadth_search(self, start, target_func, max_distance=5318008, get_all_options=False):
         frontier = Queue()
         frontier.enqueue(((start.x, start.y), 0))
 
         path_from = {(start.x, start.y): (0, 0)}
+        returnable = [] if get_all_options else None
 
         if max_distance <= 0:
             max_distance = 5318008
@@ -141,6 +210,7 @@ class World:
                 path = ''
                 current_position = current
                 next_movement = path_from[current_position]
+
                 while next_movement != (0, 0):
                     if next_movement == (0, 1):
                         path = 'N' + path
@@ -155,7 +225,10 @@ class World:
                                             1] + self.height) % self.height)
                     next_movement = path_from[current_position]
 
-                return MovePosition(current[0], current[1], path)
+                if get_all_options:
+                    returnable.append(MovePosition(current[0], current[1], path))
+                else:
+                    return MovePosition(current[0], current[1], path)
 
             cost = dequeued[1] + 1
             if cost <= max_distance:
@@ -165,7 +238,7 @@ class World:
                     if new_pos not in path_from:
                         path_from[new_pos] = (dir[0], dir[1])
                         frontier.enqueue((new_pos, cost))
-        return None
+        return returnable
 
     def manhattan(self, a, b_tuple):
         x = abs(a.x - b_tuple[0])
