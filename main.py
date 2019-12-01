@@ -17,12 +17,19 @@ from class_data import *
 # [X] 1. Implement attacking ('A' action).
 # [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE*** ***Mostly balanced***
 # [X] 3. Implement removal of hives (when stepped on remove).
-# [ ] 4. Implement gui for bot stats.
-# [ ] 5. Implement win/loss and points.
+# [P] 4. Implement gui for bot stats.
+# [P] 5. Implement win/loss and points.
 # [ ] 6. Balance, optimize, quality of life.
-# ?!?!?. Profit.
+# ?!?!?.
 
-WHITE = (255, 255, 255)
+# Points are only used if the game lasts more than 1000 turns
+# Here is how points work:
+# Points are calculated by this formula:
+# Points = 60 + destroyed_hives * 20 - hives_lost * 30 + turns_survived / 10 + total_food_collect / 5
+#           automatic 0 if eliminated
+
+BG = (171, 154, 138)
+DEAD = (151, 134, 118)
 BOARD = (191,174,158)
 FOOD = (207,230,140)
 WALL = (15, 15, 15)
@@ -39,6 +46,7 @@ Y_GRIDS = 3
 
 HIVE_COUNT = 2
 BEE_RANGE = 3
+MAX_TURNS = 1000
 
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
@@ -66,7 +74,7 @@ class Game:
         self.bots = get_bots()
         self.world.tiles = self.set_hives(w, h, self.world.tiles)
         self.world.generate_neighbors()
-        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)), math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
+        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)) + 200, math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
 
         self.turn = 0
         self.food_changes = []
@@ -83,21 +91,10 @@ class Game:
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
         self.cell_size = h / Y_SIZE
         self.half_cell = self.cell_size / 2
-        self.x_plus = (w - (self.cell_size * X_SIZE)) / 2
+        self.x_plus = (w - (self.cell_size * X_SIZE))
 
     def render(self):
-        self.screen.fill(WHITE)
-
-        highest = max([len(bot.bees) for bot in self.bots])
-        if highest < 80:
-            if self.turn & 7 == 0:      # if turn % 8 == 0
-                self.place_food()
-        elif highest < 140:
-            if self.turn & 15 == 0:     # if turn % 16 == 0
-                self.place_food()
-        elif highest < 200:
-            if self.turn & 31 == 0:     # if turn % 32 == 0
-                self.place_food()
+        self.screen.fill(BG)
             
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
@@ -138,6 +135,64 @@ class Game:
                              (hive[0] * self.cell_size + self.x_plus,
                               (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
+
+        i = 0
+        while i < len(self.bots):
+            if not self.bots[i].terminated and not self.bots[i].lost:
+                for bee in self.bots[i].bees:
+                    pygame.draw.polygon(self.screen, self.bots[i].colour,
+                                        [(bee.position.x * self.cell_size + self.x_plus + 1,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
+                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
+
+            i = i + 1
+
+    def render_text(self):
+        big_font = pygame.font.SysFont('microsoftsansserif', 24)
+        font = pygame.font.SysFont('microsoftsansserif', 18)
+
+        text = big_font.render('Turn: ' + str(self.turn), True, BLACK, None)
+        text_rect = text.get_rect()
+        text_rect.topleft = (5, 5)
+
+        self.screen.blit(text, text_rect)
+
+        i = 0
+        height = 50
+        while i < len(self.bots):
+            killed = self.bots[i].lost or self.bots[i].terminated
+
+            pygame.draw.rect(self.screen, DEAD if killed else self.bots[i].colour,
+                             (10, 5 + height, self.x_plus - 20, 2 if killed else 8))
+
+            text = big_font.render(self.bots[i].name + ': ' + ('TERMINATED' if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')), True, DEAD if killed else self.bots[i].colour, None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (5, 15 + height)
+
+            self.screen.blit(text, text_rect)
+
+            text = big_font.render(str(self.bots[i].points), True, DEAD if killed else self.bots[i].colour, None)
+            text_rect = text.get_rect()
+            text_rect.topright = (self.x_plus - 5, 15 + height)
+
+            self.screen.blit(text, text_rect)
+            if killed:
+                height = height + 55
+            else:
+                text = font.render('Bees: ' + str(len(self.bots[i].bees)), True, self.bots[i].colour, None)
+                text_rect = text.get_rect()
+                text_rect.topleft = (5, 45 + height)
+
+                self.screen.blit(text, text_rect)
+
+                height = height + 85
+
+            i = i + 1
 
     def do_bee_attack(self, bee):
         if len(bee.action) >= 3 and bee.action[0] == 'A':
@@ -218,6 +273,8 @@ class Game:
                                 break
                             i = i + 1
 
+                        self.bots[bee.index].points += 20
+                        self.bots[tile.hive_index].points -= 30
                         self.eliminated_changes.append(self.bots[tile.hive_index].hive_positions.pop(i))
                         self.bots[tile.hive_index].hives.pop(i)
                         tile.hive = False
@@ -225,6 +282,7 @@ class Game:
                         if len(self.bots[tile.hive_index].hives) == 0:
                             print('Turn ' + str(self.turn) + ': Bot index [' + str(tile.hive_index) + '] '
                                   '(' + self.bots[tile.hive_index].name + ') lost all hives, they are eliminated.')
+
                             for kill_bee in self.bots[tile.hive_index].bees:
                                 self.bee_changes.append((None, kill_bee.position.x, kill_bee.position.y))
                                 self.world.tiles[kill_bee.position.x][kill_bee.position.y].bee = None
@@ -242,6 +300,9 @@ class Game:
             if self.world.tiles[bee.position.x][bee.position.y].food:
                 self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
+                self.bots[bee.index].food_collected += 1
+                if self.bots[bee.index].food_collected % 5 == 0:
+                    self.bots[bee.index].points += 1
                 for hive in self.bots[bee.index].hives:
                     hive.food_level = hive.food_level + round(HIVE_COUNT / len(self.bots[bee.index].hives))
 
@@ -255,8 +316,33 @@ class Game:
         return enemies
 
     def do_bots(self):
-        # change world to be saved by bots and before getting their turn, update the food and bee
+        # order of turn is:
+        # 1. Spawn food
+        # 2. Get bot action
+        # 3. Attack
+        # 4. Kill low health bots
+        # 5. Move bots
+        # 6. Collect food
+        # 7. Destroy hives
+        # 8. Spawn bees
+
         bot_length = len(self.bots)
+
+        highest = max([len(bot.bees) for bot in self.bots])
+        if highest < 80:
+            if self.turn & 7 == 0:      # if turn % 8 == 0
+                self.place_food()
+        elif highest < 140:
+            if self.turn & 15 == 0:     # if turn % 16 == 0
+                self.place_food()
+        elif highest < 200:
+            if self.turn & 31 == 0:     # if turn % 32 == 0
+                self.place_food()
+
+        if self.turn % 5 == 0 and self.turn != 0:  # if turn % 32 == 0
+            for bot in self.bots:
+                if not bot.terminated and not bot.lost:
+                    bot.points += 1
 
         i = 0
         terminated_bee_changes = []
@@ -288,6 +374,7 @@ class Game:
                         hive.hive = False
                         hive.hive_index = -1
                     self.bots[i].hives = []
+                    self.bots[i].points = 0
             i = i + 1
 
         while any_terminations:
@@ -315,6 +402,7 @@ class Game:
                             hive.hive = False
                             hive.hive_index = -1
                         self.bots[i].hives = []
+                        self.bots[i].points = 0
                 i = i + 1
 
         self.food_changes = []
@@ -375,21 +463,6 @@ class Game:
                     j = j + 1
             i = i + 1
 
-        i = 0
-        while i < bot_length:
-            if not self.bots[i].terminated and not self.bots[i].lost:
-                for bee in self.bots[i].bees:
-                    pygame.draw.polygon(self.screen, self.bots[i].colour,
-                                        [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
-                                         (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
-
-            i = i + 1
         self.turn = self.turn + 1
         
     def place_food(self):
@@ -450,6 +523,7 @@ class Game:
 
     def update(self):
         self.render()
+        self.render_text()
         self.do_bots()
         
 def get_dir_x(dir):
@@ -472,8 +546,8 @@ def create_grid(w, h):
                             [3, 1, 2, 2, 2, 1, 0, 2, 2, 1, 1, 3],
                             [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
                             [0, 3, 3, 3, 1, 2, 0, 3, 2, 2, 1, 3],
-                            [0, 2, 2, 3, 3, 2, 1, 3, 1, 'A', 2, 3],
-                            [3, 2, 'B', 1, 3, 1, 2, 3, 3, 2, 2, 0],
+                            [0, 2, 2, 3, 3, 2, 1, 3, 1,'A',2, 3],
+                            [3, 2,'B',1, 3, 1, 2, 3, 3, 2, 2, 0],
                             [3, 1, 2, 2, 3, 0, 2, 1, 3, 3, 3, 0],
                             [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
                             [3, 1, 1, 2, 2, 0, 1, 2, 2, 2, 1, 3],
@@ -633,8 +707,8 @@ def randomize_grid(grid_template, w, h):
 
 
 def get_bots():
-    colours = [(255,100,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
-               (148,255,181), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
+    colours = [(255,180,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
+               (148,255,141), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
     random.shuffle(colours)
 
