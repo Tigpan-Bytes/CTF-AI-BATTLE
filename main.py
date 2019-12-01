@@ -267,7 +267,7 @@ class Game:
                 try:
                     with timeout_limit():
                         self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy(), self.eliminated_changes.copy())
-                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees], self.get_enemy_list(i))
+                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees], self.get_enemy_list(i), self.turn)
                         for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
                             self.bots[i].bees[j].data = d_a[0]
                             self.bots[i].bees[j].action = d_a[1]

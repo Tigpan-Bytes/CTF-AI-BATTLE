@@ -40,7 +40,7 @@ class AI:
             self.world.get_tile(change.x, change.y).hive = False
             self.world.get_tile(change.x, change.y).hive_index = -1
 
-    def do_turn(self, bees, enemies): # enemies[i][0] is index, enemies[i][1] is hive_positions, enemies[i][2] is bee count
+    def do_turn(self, bees, enemies, turn): # enemies[i][0] is index, enemies[i][1] is hive_positions, enemies[i][2] is bee count
         for bee in bees:
             if bee.data == '':
                 bee.data = str(random.randint(0, 3))
