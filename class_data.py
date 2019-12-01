@@ -287,4 +287,3 @@ class World:
                         path_from[next_pos] = (dir[0], dir[1])
                         frontier.enqueue(next_pos, new_cost + self.manhattan(target, next_pos))
         return None
-    

@@ -88,8 +88,16 @@ class Game:
     def render(self):
         self.screen.fill(WHITE)
 
-        if self.turn & 7 == 0: # if turn % 8 == 0
-            self.place_food()
+        highest = max([len(bot.bees) for bot in self.bots])
+        if highest < 80:
+            if self.turn & 7 == 0:      # if turn % 8 == 0
+                self.place_food()
+        elif highest < 140:
+            if self.turn & 15 == 0:     # if turn % 16 == 0
+                self.place_food()
+        elif highest < 200:
+            if self.turn & 31 == 0:     # if turn % 32 == 0
+                self.place_food()
             
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
@@ -148,11 +156,6 @@ class Game:
                 elif tile.food:
                     tile.food = False
                     self.food_changes.append((False, x, y))
-                    bee.health = 0
-                else:
-                    print('no b')
-            else:
-                print('far or sam')
 
     def do_bee_movement(self, bee, direction, other_bee):
         # return 0 = false, 1 = true, 2 = deleted
