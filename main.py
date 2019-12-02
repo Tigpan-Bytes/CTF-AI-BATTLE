@@ -66,7 +66,12 @@ def timeout_limit(seconds=TIMEOUT):
     finally:
         # if the action ends in specified time, timer is canceled
         timer.cancel()
+        
+def get_position(bot):
+    return bot.position
 
+def get_points(bot):
+    return bot.points
 
 class Game:
     def __init__(self, w, h):
@@ -78,6 +83,8 @@ class Game:
 
         self.turn = 0
         self.death_position = len(self.bots)
+        self.game_ended = False
+        self.rankings = None
         self.food_changes = []
         self.bee_changes = []
         self.eliminated_changes = []
@@ -157,7 +164,7 @@ class Game:
         big_font = pygame.font.SysFont('microsoftsansserif', 24)
         font = pygame.font.SysFont('microsoftsansserif', 18)
 
-        text = big_font.render('Turn: ' + str(self.turn), True, BLACK, None)
+        text = big_font.render('Turn: ' + str(self.turn) + ('      | Game Ended |' if self.game_ended else ''), True, BLACK, None)
         text_rect = text.get_rect()
         text_rect.topleft = (5, 5)
 
@@ -194,6 +201,36 @@ class Game:
                 height = height + 85
 
             i = i + 1
+            
+    def render_winner(self):
+        font = pygame.font.SysFont('microsoftsansserif', 28)
+
+        height = pygame.display.get_surface().get_size()[1]
+        
+        if self.rankings is None:
+            self.rankings = self.bots.copy()
+            if self.turn == 1000:
+                self.rankings.sort(key=get_points)
+            else:
+                self.rankings.sort(key=get_position)
+            self.rankings = self.rankings[min(3, len(self.rankings))::-1]
+        
+        position = len(self.rankings)
+        for bot in self.rankings:
+            text = font.render(str(position) + ': ' + bot.name + ' | ' + str(bot.points), True, bot.colour, None)
+            text_rect = text.get_rect()
+            text_rect.bottomleft = (10, height - 10)
+
+            self.screen.blit(text, text_rect)
+            
+            position -= 1
+            height -= 40
+            
+        text = font.render('WINNERS:', True, BLACK, None)
+        text_rect = text.get_rect()
+        text_rect.bottomleft = (10, height - 10)
+
+        self.screen.blit(text, text_rect)
 
     def do_bee_attack(self, bee):
         if len(bee.action) >= 3 and bee.action[0] == 'A':
@@ -475,6 +512,16 @@ class Game:
 
         self.turn = self.turn + 1
         
+        active_bots = 0
+        for bot in self.bots:
+            if not bot.terminated and not bot.lost:
+                active_bots = active_bots + 1
+                if active_bots > 1:
+                    break
+        
+        if self.turn >= MAX_TURNS or active_bots <= 1:
+            self.game_ended = True
+        
     def place_food(self):
         skips = random.randint(0, 20)
         x = random.randint(0, X_GRID_SIZE - 1)
@@ -534,7 +581,10 @@ class Game:
     def update(self):
         self.render()
         self.render_text()
-        self.do_bots()
+        if not self.game_ended:
+            self.do_bots()
+        else:
+            self.render_winner()
 
 def get_position_sufix(pos):
     if pos == 1:
