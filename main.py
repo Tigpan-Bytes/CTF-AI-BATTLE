@@ -17,7 +17,7 @@ from class_data import *
 # [X] 1. Implement attacking ('A' action).
 # [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE*** ***Mostly balanced***
 # [X] 3. Implement removal of hives (when stepped on remove).
-# [P] 4. Implement gui for bot stats.
+# [X] 4. Implement gui for bot stats.
 # [P] 5. Implement win/loss and points.
 # [ ] 6. Balance, optimize, quality of life.
 # ?!?!?.
@@ -25,7 +25,7 @@ from class_data import *
 # Points are only used if the game lasts more than 1000 turns
 # Here is how points work:
 # Points are calculated by this formula:
-# Points = 60 + destroyed_hives * 20 - hives_lost * 30 + turns_survived / 10 + total_food_collect / 5
+# Points = 60 + destroyed_hives * 20 - hives_lost * 30 + turns_survived / 10 + total_food_collect / 4
 #           automatic 0 if eliminated
 
 BG = (171, 154, 138)
@@ -74,9 +74,10 @@ class Game:
         self.bots = get_bots()
         self.world.tiles = self.set_hives(w, h, self.world.tiles)
         self.world.generate_neighbors()
-        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)) + 200, math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
+        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)) + 350, math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
 
         self.turn = 0
+        self.death_position = len(self.bots)
         self.food_changes = []
         self.bee_changes = []
         self.eliminated_changes = []
@@ -176,7 +177,7 @@ class Game:
 
             self.screen.blit(text, text_rect)
 
-            text = big_font.render(str(self.bots[i].points), True, DEAD if killed else self.bots[i].colour, None)
+            text = big_font.render(str(self.bots[i].points) + ' | ' + str(self.bots[i].position) + get_position_sufix(self.bots[i].position), True, DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topright = (self.x_plus - 5, 15 + height)
 
@@ -286,6 +287,9 @@ class Game:
                             for kill_bee in self.bots[tile.hive_index].bees:
                                 self.bee_changes.append((None, kill_bee.position.x, kill_bee.position.y))
                                 self.world.tiles[kill_bee.position.x][kill_bee.position.y].bee = None
+
+                            self.bots[tile.hive_index].position = self.death_position
+                            self.death_position -= 1
                             self.bots[tile.hive_index].bees = []
                             self.bots[tile.hive_index].lost = True
 
@@ -301,7 +305,7 @@ class Game:
                 self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
                 self.bots[bee.index].food_collected += 1
-                if self.bots[bee.index].food_collected % 5 == 0:
+                if self.bots[bee.index].food_collected & 3 == 0:
                     self.bots[bee.index].points += 1
                 for hive in self.bots[bee.index].hives:
                     hive.food_level = hive.food_level + round(HIVE_COUNT / len(self.bots[bee.index].hives))
@@ -375,6 +379,9 @@ class Game:
                         hive.hive_index = -1
                     self.bots[i].hives = []
                     self.bots[i].points = 0
+
+                    self.bots[i].position = self.death_position
+                    self.death_position -= 1
             i = i + 1
 
         while any_terminations:
@@ -403,6 +410,9 @@ class Game:
                             hive.hive_index = -1
                         self.bots[i].hives = []
                         self.bots[i].points = 0
+
+                        self.bots[i].position = self.death_position
+                        self.death_position -= 1
                 i = i + 1
 
         self.food_changes = []
@@ -525,7 +535,16 @@ class Game:
         self.render()
         self.render_text()
         self.do_bots()
-        
+
+def get_position_sufix(pos):
+    if pos == 1:
+        return 'st'
+    if pos == 2:
+        return 'nd'
+    if pos == 3:
+        return 'rd'
+    return 'th'
+
 def get_dir_x(dir):
     if dir == 'E':
         return 1

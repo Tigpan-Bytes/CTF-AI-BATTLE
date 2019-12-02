@@ -22,6 +22,7 @@ class Bot:
         self.lost = False
         self.points = 60
         self.food_collected = 0
+        self.position = 1
         self.ai = ai
         self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
         self.colour = colour
