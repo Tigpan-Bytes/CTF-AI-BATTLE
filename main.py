@@ -1,4 +1,11 @@
-# import the pygame module, so you can use it
+# Here are all the important values you may want to change
+X_GRIDS = 3
+Y_GRIDS = 3
+
+MAX_TURNS = 750
+TIMEOUT = 0.5
+
+# All the imports used in this program
 import _thread
 import importlib
 import math
@@ -13,22 +20,13 @@ from os.path import isfile, join
 import pygame
 from class_data import *
 
-# TODO List:
-# [X] 1. Implement attacking ('A' action).
-# [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE*** ***Mostly balanced***
-# [X] 3. Implement removal of hives (when stepped on remove).
-# [X] 4. Implement gui for bot stats.
-# [X] 5. Implement win/loss and points.
-# [X] 6. Balance, optimize, quality of life.
-# [ ] 7. ?
-# [ ] 8. Profit!
-
 # Points are only used if the game lasts more than 1000 turns
 # Here is how points work:
 # Points are calculated by this formula:
 # Points = 60 + destroyed_hives * 20 - hives_lost * 30 + turns_survived / 10 + total_food_collect / 4
 #           automatic 0 if eliminated
 
+# The rest of the constants being setup
 BG = (171, 154, 138)
 DEAD = (151, 134, 118)
 BOARD = (191,174,158)
@@ -37,27 +35,20 @@ WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 WAS_BLACK = (140, 130, 120)
 
-TIMEOUT = 0.5
-
 X_SIZE = 32
 Y_SIZE = 32
 
-X_GRIDS = 3
-Y_GRIDS = 3
-
 HIVE_COUNT = 2
 BEE_RANGE = 3
-MAX_TURNS = 750
 
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
 
-class TimeoutException(Exception):
-    def __init__(self, msg=''):
-        self.msg = msg
+class TimeoutException(Exception): pass
 
 @contextmanager
 def timeout_limit(seconds=TIMEOUT):
+    # starts a thread to track the time, when the time is up it cancels the main thread with a Timeout exception
     timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
     timer.start()
     try:
@@ -67,7 +58,8 @@ def timeout_limit(seconds=TIMEOUT):
     finally:
         # if the action ends in specified time, timer is canceled
         timer.cancel()
-        
+
+# helper functions to sort the bot list when the game is over
 def get_position(bot):
     return bot.position
 
@@ -86,6 +78,7 @@ class Game:
         self.death_position = len(self.bots)
         self.game_ended = False
         self.rankings = None
+        # uses deque instead of lists because they are slightly faster for a slightly larger memory penalty
         self.food_changes = deque()
         self.bee_changes = deque()
         self.eliminated_changes = deque()
@@ -94,6 +87,7 @@ class Game:
             self.place_food()
 
         for bot in self.bots:
+            # gives a copy of the world to each bot
             bot.ai.world = self.world.copy()
 
     def resize_board(self, w, h):
@@ -183,7 +177,7 @@ class Game:
             pygame.draw.rect(self.screen, DEAD if killed else self.bots[i].colour,
                              (10, 5 + height, self.x_plus - 20, 2 if killed else 8))
 
-            text = big_font.render(''.join([self.bots[i].name, ': ', 'TERMINATED' if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')]), True, DEAD if killed else self.bots[i].colour, None)
+            text = big_font.render(''.join([self.bots[i].name, ': ', ''.join(['TERMINATED [', self.bots[i].terminated_reason, ']']) if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')]), True, DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topleft = (5, 15 + height)
 
@@ -417,8 +411,10 @@ class Game:
                         print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name,
                                        ') timed out to many times. Terminating it.']))
 
+
                         any_terminations = True
                         self.bots[i].terminated = True
+                        self.bots[i].terminated_reason = 'Timeout'
                         for bee in self.bots[i].bees:
                             terminated_bee_changes.append((None, bee.position.x, bee.position.y))
                             self.world.tiles[bee.position.x][bee.position.y].bee = None
@@ -438,6 +434,7 @@ class Game:
 
                     any_terminations = True
                     self.bots[i].terminated = True
+                    self.bots[i].terminated_reason = 'Naughty'
                     for bee in self.bots[i].bees:
                         terminated_bee_changes.append((None, bee.position.x, bee.position.y))
                         self.world.tiles[bee.position.x][bee.position.y].bee = None
@@ -469,6 +466,7 @@ class Game:
 
                         any_terminations = True
                         self.bots[i].terminated = True
+                        self.bots[i].terminated_reason = 'Naughty'
                         for bee in self.bots[i].bees:
                             terminated_bee_changes.append((None, bee.position.x, bee.position.y))
                             self.world.tiles[bee.position.x][bee.position.y].bee = None
@@ -808,6 +806,7 @@ def randomize_grid(grid_template, w, h):
 
 
 def get_bots():
+    # a list of all the possible colours of the bots
     colours = [(255,180,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
                (148,255,141), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
                (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
@@ -815,13 +814,16 @@ def get_bots():
 
     bot_path = './bots'
 
+    # gets all the bots in the directory
     bot_names = [f[0:-3] for f in listdir(bot_path) if isfile(join(bot_path, f))]
     random.shuffle(bot_names)
     bots = []
     for i in range(len(bot_names)):
         try:
             bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
-            bots.append(Bot(bot_names[i][:min(15, len(bot_names[i]))], bot_ai, colours.pop(0)))
+            # creates all the bots and appends it to the bot array
+            bots.append(Bot(bot_names[i][:min(16, len(bot_names[i]))], bot_ai, colours.pop(0)))
+            # each bot name is limited to only 16 characters
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())
@@ -835,9 +837,10 @@ def main():
     pygame.init()
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
+    # creates the game
     game = Game(X_SIZE, Y_SIZE)
 
-    while 1:
+    while 1: # While True: (but while 1 is technically slightly faster)
         game.update()
 
         pygame.display.update()

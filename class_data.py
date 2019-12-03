@@ -19,6 +19,7 @@ class Bot:
     def __init__(self, name, ai, colour):
         self.name = name
         self.terminated = False
+        self.terminated_reason = ''
         self.lost = False
         self.points = 60
         self.food_collected = 0

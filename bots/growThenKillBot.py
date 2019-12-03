@@ -14,13 +14,13 @@ from class_data import *
 # 1. This bot doesn't make an attempt to attack enemy hives or bees, and often gets stuck running to their own death.
 # 2. This bot is very very slow, even to the point of getting a Timeout error if it grows too big. This happens because
 #       each individual bee looks for food or bees, and if that food or bee is very far, it takes a long time to calculate that. Then doing that
-#       calculation for 50+ bees is very very slow. You could speed this up greatly by setting distance restrictions on the
+#       calculation for 100+ bees is very very slow. You could speed this up greatly by setting distance restrictions on the
 #       breadth_searchs. Then doing something else if no path could be found, maybe something with a breadth_path to the enemy hives?
 # 3. Currently when the bot is in phase 1 (collect food) many bees all flock toward one piece of food. Wouldn't it be much better
 #       to have them split up. You could do this by storing a list (or dictionary) of all the food currently being targeted, then
 #       don't have new bees target that tile(change the targeting function so if position is in self.currently_targeted_foods).
-# 4. The bot also has a chance of erroring if no food exists (bee.action = 'M ' + path.direction
-#       AttributeError: 'NoneType' object has no attribute 'direction', line 76), although this can be easily fixed.
+# 4. The bot also has a chance of erroring if no food or enemy bees exist (bee.action = 'M ' + path.direction
+#       AttributeError: 'NoneType' object has no attribute 'direction', line 76 or 83), although this can be easily fixed by checking if path is not None.
 # 5. The 150 turn phase change is very arbitrary, maybe it should be based on bee count or not included at all.
 # 6. Overall it is a mediocre bot, although it has a high chance of erroring out because of a timeout error.
 #       Surprisingly this bot does better when there are other much more aggressive bots out their to keep its bees
