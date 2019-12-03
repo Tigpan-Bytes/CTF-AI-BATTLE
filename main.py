@@ -246,13 +246,13 @@ class Game:
             y = int(split[1])
             bee.action = ''
 
-            if self.world.manhattan(bee.position, (x,y)) <= BEE_RANGE and (bee.position.x != x or bee.position.y != y):
+            if self.world.manhattan(bee.position, (x,y)) <= BEE_RANGE:
                 tile = self.world.get_tile(x, y)
                 if tile.bee:
                     tile.bee.health = tile.bee.health - 1
                     self.bee_changes.append((tile.bee.copy(), x, y))
                     bee.action_success = True
-                elif tile.food:
+                if tile.food:
                     tile.food = False
                     self.food_changes.append((False, x, y))
 
@@ -344,6 +344,8 @@ class Game:
 
     def check_bee_food(self, bees):
         for bee in bees:
+            # also resets action for each bee
+            bee.action = ''
             if self.world.tiles[bee.position.x][bee.position.y].food:
                 self.food_changes.append((False, bee.position.x, bee.position.y))
                 self.world.tiles[bee.position.x][bee.position.y].food = False
@@ -520,7 +522,7 @@ class Game:
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated and not self.bots[i].lost:
-                self.check_bee_food(self.bots[i].bees)
+                self.check_bee_food(self.bots[i].bees) #check bee food also resets action
             i = i + 1
 
         i = 0

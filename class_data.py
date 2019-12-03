@@ -11,7 +11,7 @@ class Tile:
         self.was_hive = hive or was_hive
         self.hive_index = hive_index
         self.food = food
-        self.bee = bee  # possibly be a tuple (bot_index, index)
+        self.bee = bee
         self.food_level = -1
 
 
