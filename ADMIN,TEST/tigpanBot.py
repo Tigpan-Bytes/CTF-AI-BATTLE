@@ -53,7 +53,6 @@ class AI:
                 self.path = self.world.breadth_path(combed)
                 self.last_paths = len(combed)
 
-
         for bee in bees:
             if bee.data == '':
                 bee.data = str(random.randint(0, 3)) + '-N'

@@ -23,16 +23,16 @@ class Bot:
         self.points = 60
         self.food_collected = 0
         self.position = 1
+        self.timeouts = 5
         self.ai = ai
         self.hive_colour = (max(colour[0] - 40, 0), max(colour[1] - 40, 0), max(colour[2] - 40, 0))
         self.colour = colour
         self.hives = []
         self.hive_positions = []
-        self.bees = []
-        self.bee_action_units = []
+        self.bees = deque()
 
 class Bee:
-    def __init__(self, index, position, health=5, data='', action_success=True):
+    def __init__(self, index, position, health=6, data='', action_success=True):
         self.index = index
         self.position = position
         self.health = health
@@ -255,7 +255,7 @@ class World:
     def depth_search(self, start, target, max_distance=5318008):
         frontier = PriorityQueue()
         frontier.enqueue((start.x, start.y), 0)
-        
+
         cost_at = {(start.x, start.y): 0}
         path_from = {(start.x, start.y): (0, 0)}
 
@@ -282,7 +282,7 @@ class World:
 
             for dir in self._neighbors[current[0]][current[1]]:
                 new_cost = cost_at[(current[0], current[1])] + 1
-                if new_cost < max_distance:      
+                if new_cost < max_distance:
                     next_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
 
                     if self.get_tile(next_pos[0], next_pos[1]).walkable and (next_pos not in cost_at or new_cost < cost_at[next_pos]):

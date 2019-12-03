@@ -18,9 +18,10 @@ from class_data import *
 # [X] 2. Implement lower health in collision wins. ***NEED TO BALANCE HEALTH AND RANGE*** ***Mostly balanced***
 # [X] 3. Implement removal of hives (when stepped on remove).
 # [X] 4. Implement gui for bot stats.
-# [P] 5. Implement win/loss and points.
-# [ ] 6. Balance, optimize, quality of life.
-# ?!?!?.
+# [X] 5. Implement win/loss and points.
+# [X] 6. Balance, optimize, quality of life.
+# [ ] 7. ?
+# [ ] 8. Profit!
 
 # Points are only used if the game lasts more than 1000 turns
 # Here is how points work:
@@ -46,7 +47,7 @@ Y_GRIDS = 3
 
 HIVE_COUNT = 2
 BEE_RANGE = 3
-MAX_TURNS = 1000
+MAX_TURNS = 750
 
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
@@ -71,7 +72,7 @@ def get_position(bot):
     return bot.position
 
 def get_points(bot):
-    return bot.points
+    return -bot.points
 
 class Game:
     def __init__(self, w, h):
@@ -85,11 +86,11 @@ class Game:
         self.death_position = len(self.bots)
         self.game_ended = False
         self.rankings = None
-        self.food_changes = []
-        self.bee_changes = []
-        self.eliminated_changes = []
+        self.food_changes = deque()
+        self.bee_changes = deque()
+        self.eliminated_changes = deque()
 
-        for _ in range(3):
+        for _ in range(2):
             self.place_food()
 
         for bot in self.bots:
@@ -97,6 +98,7 @@ class Game:
 
     def resize_board(self, w, h):
         self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
+        self.screen.set_alpha(None)
         self.cell_size = h / Y_SIZE
         self.half_cell = self.cell_size / 2
         self.x_plus = (w - (self.cell_size * X_SIZE))
@@ -164,7 +166,10 @@ class Game:
         big_font = pygame.font.SysFont('microsoftsansserif', 24)
         font = pygame.font.SysFont('microsoftsansserif', 18)
 
-        text = big_font.render('Turn: ' + str(self.turn) + ('      | Game Ended |' if self.game_ended else ''), True, BLACK, None)
+        if self.game_ended:
+            text = big_font.render(''.join(['Turn: ', str(self.turn), '      | Game Ended |']), True, BLACK, None)
+        else:
+            text = big_font.render(''.join(['Turn: ', str(self.turn)]),True, BLACK, None)
         text_rect = text.get_rect()
         text_rect.topleft = (5, 5)
 
@@ -178,13 +183,13 @@ class Game:
             pygame.draw.rect(self.screen, DEAD if killed else self.bots[i].colour,
                              (10, 5 + height, self.x_plus - 20, 2 if killed else 8))
 
-            text = big_font.render(self.bots[i].name + ': ' + ('TERMINATED' if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')), True, DEAD if killed else self.bots[i].colour, None)
+            text = big_font.render(''.join([self.bots[i].name, ': ', 'TERMINATED' if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')]), True, DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topleft = (5, 15 + height)
 
             self.screen.blit(text, text_rect)
 
-            text = big_font.render(str(self.bots[i].points) + ' | ' + str(self.bots[i].position) + get_position_sufix(self.bots[i].position), True, DEAD if killed else self.bots[i].colour, None)
+            text = big_font.render(''.join([str(self.bots[i].points), ' | ', str(self.bots[i].position), get_position_suffix(self.bots[i].position)]), True, DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topright = (self.x_plus - 5, 15 + height)
 
@@ -192,11 +197,18 @@ class Game:
             if killed:
                 height = height + 55
             else:
-                text = font.render('Bees: ' + str(len(self.bots[i].bees)), True, self.bots[i].colour, None)
+                text = font.render(''.join(['Bees: ', str(len(self.bots[i].bees))]), True, self.bots[i].colour, None)
                 text_rect = text.get_rect()
                 text_rect.topleft = (5, 45 + height)
 
                 self.screen.blit(text, text_rect)
+
+                if self.bots[i].timeouts != 5:
+                    text = font.render(''.join(['Time outs: ', str(5 - self.bots[i].timeouts)]), True, self.bots[i].colour, None)
+                    text_rect = text.get_rect()
+                    text_rect.topright = (self.x_plus -5, 45 + height)
+
+                    self.screen.blit(text, text_rect)
 
                 height = height + 85
 
@@ -209,15 +221,15 @@ class Game:
         
         if self.rankings is None:
             self.rankings = self.bots.copy()
-            if self.turn == 1000:
+            if self.turn == MAX_TURNS:
                 self.rankings.sort(key=get_points)
             else:
                 self.rankings.sort(key=get_position)
-            self.rankings = self.rankings[min(3, len(self.rankings))::-1]
+            self.rankings = self.rankings[min(2, len(self.rankings) - 1)::-1]
         
         position = len(self.rankings)
         for bot in self.rankings:
-            text = font.render(str(position) + ': ' + bot.name + ' | ' + str(bot.points), True, bot.colour, None)
+            text = font.render(''.join([str(position), ': ', bot.name, ' | ', str(bot.points)]), True, bot.colour, None)
             text_rect = text.get_rect()
             text_rect.bottomleft = (10, height - 10)
 
@@ -318,8 +330,8 @@ class Game:
                         tile.hive = False
 
                         if len(self.bots[tile.hive_index].hives) == 0:
-                            print('Turn ' + str(self.turn) + ': Bot index [' + str(tile.hive_index) + '] '
-                                  '(' + self.bots[tile.hive_index].name + ') lost all hives, they are eliminated.')
+                            print(''.join(['Turn ', str(self.turn), ': Bot index [', str(tile.hive_index), '] '
+                                  '(', self.bots[tile.hive_index].name, ') lost all hives, they are eliminated.']))
 
                             for kill_bee in self.bots[tile.hive_index].bees:
                                 self.bee_changes.append((None, kill_bee.position.x, kill_bee.position.y))
@@ -399,9 +411,29 @@ class Game:
                             self.bots[i].bees[j].data = d_a[0]
                             self.bots[i].bees[j].action = d_a[1]
                 except TimeoutException as e:
-                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name, ') exceeded timelimit, no actions taken.']))
+                    self.bots[i].timeouts -= 1
+                    if self.bots[i].timeouts == 0:
+                        print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name,
+                                       ') timed out to many times. Terminating it.']))
+
+                        any_terminations = True
+                        self.bots[i].terminated = True
+                        for bee in self.bots[i].bees:
+                            terminated_bee_changes.append((None, bee.position.x, bee.position.y))
+                            self.world.tiles[bee.position.x][bee.position.y].bee = None
+                        self.bots[i].bees = []
+                        for hive, pos in zip(self.bots[i].hives, self.bots[i].hive_positions):
+                            terminated_hive_changes.append(pos)
+                            hive.hive = False
+                            hive.hive_index = -1
+                        self.bots[i].hives = []
+                        self.bots[i].points = 0
+
+                        self.bots[i].position = self.death_position
+                        self.death_position -= 1
                 except Exception:
-                    print('Turn ' + str(self.turn) + ': Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name, ') did a naughty. Terminating it.']))
                     print(" > Naughty details:", traceback.format_exc())
 
                     any_terminations = True
@@ -430,9 +462,9 @@ class Game:
                         with timeout_limit(TIMEOUT / 5):
                             self.bots[i].ai.update_tiles([].copy(), terminated_bee_changes.copy(), terminated_hive_changes.copy())
                     except TimeoutException as e:
-                        print('Turn ' + str(self.turn) + '.5: Bot index [' + str(i) + '] (' + self.bots[i].name + ') exceeded timelimit, no actions taken.')
+                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name, ') exceeded timelimit, no actions taken.']))
                     except Exception:
-                        print('Turn ' + str(self.turn) + '.5: Bot index [' + str(i) + '] (' + self.bots[i].name + ') did a naughty. Terminating it.')
+                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name, ') did a naughty. Terminating it.']))
                         print(" > Naughty details:", traceback.format_exc())
 
                         any_terminations = True
@@ -526,7 +558,7 @@ class Game:
         skips = random.randint(0, 20)
         x = random.randint(0, X_GRID_SIZE - 1)
         y = random.randint(0, Y_GRID_SIZE - 1)
-        while True:
+        while 1:
             tile = self.world.get_tile(x,y)
             if tile.walkable and not tile.was_hive:
                 if skips == 0:
@@ -586,7 +618,7 @@ class Game:
         else:
             self.render_winner()
 
-def get_position_sufix(pos):
+def get_position_suffix(pos):
     if pos == 1:
         return 'st'
     if pos == 2:
@@ -789,7 +821,7 @@ def get_bots():
     for i in range(len(bot_names)):
         try:
             bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
-            bots.append(Bot(bot_names[i], bot_ai, colours.pop(0)))
+            bots.append(Bot(bot_names[i][:min(15, len(bot_names[i]))], bot_ai, colours.pop(0)))
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())
@@ -805,7 +837,7 @@ def main():
 
     game = Game(X_SIZE, Y_SIZE)
 
-    while True:
+    while 1:
         game.update()
 
         pygame.display.update()
