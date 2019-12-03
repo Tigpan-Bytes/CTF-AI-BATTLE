@@ -2,9 +2,13 @@
 # Written by Chad McCool
 # Member of team: h4x0rz
 
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random
 import math
+import itertools
 from class_data import *
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
+# You also by extension get all the imports in class_data
 
 # BEHAVIOR:
 # Find the closest enemy hive using a breadth first search.

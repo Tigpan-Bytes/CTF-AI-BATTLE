@@ -99,7 +99,7 @@ class Game:
 
     def render(self):
         self.screen.fill(BG)
-            
+
         pygame.draw.rect(self.screen, WALL, (self.x_plus, 0, X_SIZE * self.cell_size, Y_SIZE * self.cell_size))
 
         hives = []
@@ -207,12 +207,12 @@ class Game:
                 height = height + 85
 
             i = i + 1
-            
+
     def render_winner(self):
         font = pygame.font.SysFont('microsoftsansserif', 28)
 
         height = pygame.display.get_surface().get_size()[1]
-        
+
         if self.rankings is None:
             self.rankings = self.bots.copy()
             if self.turn == MAX_TURNS:
@@ -220,7 +220,7 @@ class Game:
             else:
                 self.rankings.sort(key=get_position)
             self.rankings = self.rankings[min(2, len(self.rankings) - 1)::-1]
-        
+
         position = len(self.rankings)
         for bot in self.rankings:
             text = font.render(''.join([str(position), ': ', bot.name, ' | ', str(bot.points)]), True, bot.colour, None)
@@ -228,10 +228,10 @@ class Game:
             text_rect.bottomleft = (10, height - 10)
 
             self.screen.blit(text, text_rect)
-            
+
             position -= 1
             height -= 40
-            
+
         text = font.render('WINNERS:', True, BLACK, None)
         text_rect = text.get_rect()
         text_rect.bottomleft = (10, height - 10)
@@ -301,7 +301,7 @@ class Game:
                             self.bee_changes.append((None, tile.bee.position.x, tile.bee.position.y))
                             tile.bee = None
                         return 2
-                    
+
                 if move:
                     self.world.tiles[bee.position.x][bee.position.y].bee = None
                     self.bee_changes.append((None, bee.position.x, bee.position.y))
@@ -543,17 +543,17 @@ class Game:
             i = i + 1
 
         self.turn = self.turn + 1
-        
+
         active_bots = 0
         for bot in self.bots:
             if not bot.terminated and not bot.lost:
                 active_bots = active_bots + 1
                 if active_bots > 1:
                     break
-        
+
         if self.turn >= MAX_TURNS or active_bots <= 1:
             self.game_ended = True
-        
+
     def place_food(self):
         skips = random.randint(0, 20)
         x = random.randint(0, X_GRID_SIZE - 1)
@@ -571,12 +571,12 @@ class Game:
                 y = y + 1
                 if y >= Y_GRID_SIZE:
                     y = 0
-        
+
         for x_g in range(X_GRIDS):
             for y_g in range(Y_GRIDS):
                 self.food_changes.append((True, x + x_g * X_GRID_SIZE, y + y_g * Y_GRID_SIZE))
                 self.world.tiles[x + x_g * X_GRID_SIZE][y + y_g * Y_GRID_SIZE].food = True
-    
+
     def set_hives(self, w, h, grid):
         i = 0  # index of bots
         for column in range(X_GRIDS):
@@ -822,10 +822,49 @@ def get_bots():
     bots = []
     for i in range(len(bot_names)):
         try:
-            bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
-            # creates all the bots and appends it to the bot array
-            bots.append(Bot(bot_names[i][:min(16, len(bot_names[i]))], bot_ai, colours.pop(0)))
-            # each bot name is limited to only 16 characters
+            clean = 1
+            unclean_index = 1
+            # scans the file for imports
+            with open('bots/' + bot_names[i] + '.py', 'r') as f:
+                line = f.readline()
+                line = line.partition('#')[0]
+                if not line.isspace():
+                    line = line.strip()
+
+                while line:
+                    unclean_index += 1
+                    index = line.find('from ')
+                    if index == 0:
+                        if line[index + 5:] != 'class_data import *':
+                            clean = 2
+                            break
+                    index = line.find('import')
+                    if index == 0:
+                        if not (line[index + 7:] == 'random' or line[index + 7:] == 'math' or line[index + 7:] == 'itertools'):
+                            clean = 2
+                            break
+                    if 'open(' in line:
+                        clean = 3
+                        break
+                    if '__import__' in line:
+                        clean = 2
+                        break
+
+                    line = f.readline()
+                    line = line.partition('#')[0]
+                    if not line.isspace():
+                        line = line.strip()
+
+            if clean == 1:
+                bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
+                # creates all the bots and appends it to the bot array
+                bots.append(Bot(bot_names[i][:min(16, len(bot_names[i]))], bot_ai, colours.pop(0)))
+                # each bot name is limited to only 16 characters
+            else:
+                if clean == 2:
+                    print('Start: Bot (' + bot_names[i] + ') had illegal imports, it is not being included. Unclean line: ' + str(unclean_index))
+                else:
+                    print('Start: Bot (' + bot_names[i] + ') attempted to open a file, it is not being included. Unclean line: ' + str(unclean_index))
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())

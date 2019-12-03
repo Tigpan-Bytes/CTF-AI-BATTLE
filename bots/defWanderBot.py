@@ -2,9 +2,13 @@
 # Written by Hacker-man Mann
 # Member of team: m0r3_1337
 
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random
 import math
+import itertools
 from class_data import *
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
+# You also by extension get all the imports in class_data
 
 # BEHAVIOR:
 # When a bee has no data (just created bee) assign it randomly D or W

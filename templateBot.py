@@ -2,9 +2,13 @@
 # Written by PERSON NAMES
 # Member of team: TEAM NAME
 
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random
 import math
+import itertools
 from class_data import *
+# THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
+# You also by extension get all the imports in class_data
 
 # BEHAVIOR:
 # Its a good idea to write out the behavior of the bot here so it is easy for your team to look at and know
