@@ -1,4 +1,4 @@
-# Here are all the important values you may want to change
+# Here are all the important values you may want to change for testing purposes
 X_GRIDS = 3
 Y_GRIDS = 3
 
