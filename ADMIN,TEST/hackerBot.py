@@ -2,6 +2,7 @@ import random
 import math
 from class_data import *
 
+
 class AI:
     def __init__(self, index):
         self.world = None

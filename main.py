@@ -823,15 +823,18 @@ def get_bots():
     for i in range(len(bot_names)):
         try:
             clean = 1
-            unclean_index = 1
+            unclean_index = 0
             # scans the file for imports
             with open('bots/' + bot_names[i] + '.py', 'r') as f:
-                line = f.readline()
-                line = line.partition('#')[0]
-                if not line.isspace():
-                    line = line.strip()
+                while 1:
+                    line = f.readline()
+                    if not line:
+                        break
 
-                while line:
+                    line = line.partition('#')[0]
+                    if not line.isspace():
+                        line = line.strip()
+
                     unclean_index += 1
                     index = line.find('from ')
                     if index == 0:
@@ -849,11 +852,6 @@ def get_bots():
                     if '__import__' in line:
                         clean = 2
                         break
-
-                    line = f.readline()
-                    line = line.partition('#')[0]
-                    if not line.isspace():
-                        line = line.strip()
 
             if clean == 1:
                 bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
