@@ -850,14 +850,14 @@ def get_bots():
                     if '(open(' in line or '=open(' in line or ' open(' in line:
                         clean = 3
                         break
-                    index = max(line.find(' open'), line.find('=open'), line.find('(open'))
+                    index = max(line.find('\topen'), line.find('\nopen'), line.find(' open'), line.find('=open'), line.find('(open'))
                     if index != -1:
                         index += 5
                         while index < len(line):
                             if line[index] == '(':
                                 clean = 3
                                 break
-                            elif line[index] != ' ':
+                            elif not line[index].isspace():
                                 break
                             index = index + 1
                     if clean == 3:
