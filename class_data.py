@@ -244,6 +244,55 @@ class World:
                         frontier.enqueue((new_pos, cost))
         return returnable
 
+    def directed_breadth_search(self, start, wall_func, target_func, max_distance=5318008, get_all_options=False):
+        frontier = Queue()
+        frontier.enqueue(((start.x, start.y), 0))
+
+        path_from = {(start.x, start.y): (0, 0)}
+        returnable = [] if get_all_options else None
+
+        if max_distance <= 0:
+            max_distance = 5318008
+
+        while not frontier.empty():
+            dequeued = frontier.dequeue()
+            current = dequeued[0]
+
+            if target_func(Position(current[0], current[1]), dequeued[1]):
+                path = ''
+                current_position = current
+                next_movement = path_from[current_position]
+
+                while next_movement != (0, 0):
+                    if next_movement == (0, 1):
+                        path = 'N' + path
+                    if next_movement == (0, -1):
+                        path = 'S' + path
+                    if next_movement == (1, 0):
+                        path = 'E' + path
+                    if next_movement == (-1, 0):
+                        path = 'W' + path
+                    current_position = ((current_position[0] - next_movement[0] + self.width) % self.width,
+                                        (current_position[1] - next_movement[
+                                            1] + self.height) % self.height)
+                    next_movement = path_from[current_position]
+
+                if get_all_options:
+                    returnable.append(MovePosition(current[0], current[1], path))
+                else:
+                    return MovePosition(current[0], current[1], path)
+
+            cost = dequeued[1] + 1
+            if cost <= max_distance:
+                dirs = [(0,1),(0,-1),(1,0),(-1,0)] if (x + y) & 1 else [(-1,0),(1,0),(0,-1),(0,1)]
+                for dir in dirs:
+                    new_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
+
+                    if wall_func(new_pos, cost) and new_pos not in path_from:
+                        path_from[new_pos] = (dir[0], dir[1])
+                        frontier.enqueue((new_pos, cost))
+        return returnable
+
     def manhattan(self, a, b_tuple):
         x = abs(a.x - b_tuple[0])
         if x > self.half_width:
@@ -286,7 +335,47 @@ class World:
                 if new_cost < max_distance:
                     next_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
 
-                    if self.get_tile(next_pos[0], next_pos[1]).walkable and (next_pos not in cost_at or new_cost < cost_at[next_pos]):
+                    if next_pos not in cost_at or new_cost < cost_at[next_pos]:
+                        cost_at[next_pos] = new_cost
+                        path_from[next_pos] = (dir[0], dir[1])
+                        frontier.enqueue(next_pos, new_cost + self.manhattan(target, next_pos))
+        return None
+    
+    def directed_depth_search(self, start, wall_func, target, max_distance=5318008):
+        frontier = PriorityQueue()
+        frontier.enqueue((start.x, start.y), 0)
+
+        cost_at = {(start.x, start.y): 0}
+        path_from = {(start.x, start.y): (0, 0)}
+
+        while not frontier.empty():
+            current = frontier.dequeue()[1]
+
+            if current[0] == target.x and current[1] == target.y:
+                path = ''
+                current_position = current
+                next_movement = path_from[current_position]
+                while next_movement != (0, 0):
+                    if next_movement == (0, 1):
+                        path = 'N' + path
+                    if next_movement == (0, -1):
+                        path = 'S' + path
+                    if next_movement == (1, 0):
+                        path = 'E' + path
+                    if next_movement == (-1, 0):
+                        path = 'W' + path
+                    current_position = ((current_position[0] - next_movement[0] + self.width) % self.width,
+                                        (current_position[1] - next_movement[1] + self.height) % self.height)
+                    next_movement = path_from[current_position]
+                return MovePosition(current[0], current[1], path)
+
+            dirs = [(0,1),(0,-1),(1,0),(-1,0)] if (x + y) & 1 else [(-1,0),(1,0),(0,-1),(0,1)]
+            for dir in dirs:
+                new_cost = cost_at[(current[0], current[1])] + 1
+                if new_cost < max_distance:
+                    next_pos = ((current[0] + dir[0] + self.width) % self.width, (current[1] + dir[1] + self.height) % self.height)
+
+                    if wall_func(next_pos, new_cost) and (next_pos not in cost_at or new_cost < cost_at[next_pos]):
                         cost_at[next_pos] = new_cost
                         path_from[next_pos] = (dir[0], dir[1])
                         frontier.enqueue(next_pos, new_cost + self.manhattan(target, next_pos))

@@ -846,9 +846,23 @@ def get_bots():
                         if not (line[index + 7:] == 'random' or line[index + 7:] == 'math' or line[index + 7:] == 'itertools'):
                             clean = 2
                             break
-                    if 'open(' in line:
+                        
+                    if '(open(' in line or '=open(' in line or ' open(' in line:
                         clean = 3
                         break
+                    index = max(line.find(' open'), line.find('=open'), line.find('(open'))
+                    if index != -1:
+                        index += 5
+                        while index < len(line):
+                            if line[index] == '(':
+                                clean = 3
+                                break
+                            elif line[index] != ' ':
+                                break
+                            index = index + 1
+                    if clean == 3:
+                        break
+                    
                     if '__import__' in line:
                         clean = 2
                         break
