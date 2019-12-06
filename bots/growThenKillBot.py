@@ -36,6 +36,7 @@ class AI:
             If you want to store data that is used from turn to turn, put it here."""
         self.index = index
         self.world = None # world is supplied slightly later by the main game
+        self.phase = 1 # a variable that is kept through turns
 
     def has_food(self, position, distance):
         """A function passed into self.world.breadth_search to determine if the cell is the end.
@@ -73,8 +74,8 @@ class AI:
         for bee in bees:
             # loops through every single bee
 
-            if turn < 150:
-                # if the current turn is less than 300
+            if self.phase == 1:
+                # check if you are still on the first phase
 
                 path = self.world.breadth_search(bee.position, self.has_food)
                 # breadth_search returns a MovePosition position class, with .x and .y of the final position
@@ -82,6 +83,8 @@ class AI:
                 bee.action = 'M ' + path.direction
 
                 # it looks for the closest piece of food to each bot then moves to collect it
+                if turn > 150:
+                    self.phase = 2 # change the phase (don't forget self.)
             else:
                 path = self.world.breadth_search(bee.position, self.is_enemy)
                 # the same, but instead of looking for food, looks for enemy bees
