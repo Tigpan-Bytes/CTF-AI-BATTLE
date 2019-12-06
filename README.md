@@ -1,5 +1,5 @@
-When the contest goes live. A new public repo will be created with 
-1 commit containing everything.
+# Important notices.
 
-Everything in the ADMIN,TEST folder is for admin and testing purposes only.
-Everything else is what will be given to the contestants.
+- To read the documentation and overview you must open them in your web-browser.
+- To use this, you must have python and the module pygame installed.
+- To run it, run main.py and it will start the game with all the AIs in the bots folder.
