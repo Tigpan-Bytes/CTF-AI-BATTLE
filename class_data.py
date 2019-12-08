@@ -16,8 +16,9 @@ class Tile:
 
 
 class Bot:
-    def __init__(self, name, ai, colour):
+    def __init__(self, name, team, ai, colour):
         self.name = name
+        self.team = team
         self.terminated = False
         self.terminated_reason = ''
         self.lost = False

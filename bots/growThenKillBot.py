@@ -1,6 +1,6 @@
 # Grow -> Kill Bot
 # Written by Joe Generic
-# Member of team: w1nn3r5
+TEAM = 'w1nn3r5'  # VERY IMPORTANT YOU ADD THIS
 
 # THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random

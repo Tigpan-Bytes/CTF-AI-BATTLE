@@ -29,8 +29,8 @@ from class_data import *
 # The rest of the constants being setup
 BG = (171, 154, 138)
 DEAD = (151, 134, 118)
-BOARD = (191,174,158)
-FOOD = (207,230,140)
+BOARD = (191, 174, 158)
+FOOD = (207, 230, 140)
 WALL = (15, 15, 15)
 BLACK = (0, 0, 0)
 WAS_BLACK = (140, 130, 120)
@@ -44,7 +44,9 @@ BEE_RANGE = 3
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
 
+
 class TimeoutException(Exception): pass
+
 
 @contextmanager
 def timeout_limit(seconds=TIMEOUT):
@@ -59,12 +61,15 @@ def timeout_limit(seconds=TIMEOUT):
         # if the action ends in specified time, timer is canceled
         timer.cancel()
 
+
 # helper functions to sort the bot list when the game is over
 def get_position(bot):
     return bot.position
 
+
 def get_points(bot):
     return -bot.points
+
 
 class Game:
     def __init__(self, w, h):
@@ -106,13 +111,14 @@ class Game:
         was_hives = []
         for x in range(X_SIZE):
             for y in range(Y_SIZE):
-                tile = self.world.get_tile(x,y)
+                tile = self.world.get_tile(x, y)
                 if tile.walkable:
                     if tile.hive:
                         if tile.hive_index == -1:
                             tile.hive = False
                             pygame.draw.rect(self.screen, BOARD,
-                                             (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
+                                             (x * self.cell_size + self.x_plus,
+                                              (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                               self.cell_size + 1, self.cell_size + 1))
                         else:
                             hives.append([x, y, self.bots[tile.hive_index].hive_colour])
@@ -120,14 +126,17 @@ class Game:
                         was_hives.append([x, y])
                     else:
                         pygame.draw.rect(self.screen, FOOD if tile.food else BOARD,
-                                         (x * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
+                                         (x * self.cell_size + self.x_plus,
+                                          (Y_SIZE - 1) * self.cell_size - y * self.cell_size,
                                           self.cell_size + 1, self.cell_size + 1))
         for hive in hives:
             pygame.draw.rect(self.screen, BLACK,
-                             (hive[0] * self.cell_size + self.x_plus - 2, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size - 2,
+                             (hive[0] * self.cell_size + self.x_plus - 2,
+                              (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size - 2,
                               self.cell_size + 5, self.cell_size + 5))
             pygame.draw.rect(self.screen, hive[2],
-                             (hive[0] * self.cell_size + self.x_plus, (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
+                             (hive[0] * self.cell_size + self.x_plus,
+                              (Y_SIZE - 1) * self.cell_size - hive[1] * self.cell_size,
                               self.cell_size + 1, self.cell_size + 1))
 
         for hive in was_hives:
@@ -146,13 +155,16 @@ class Game:
                 for bee in self.bots[i].bees:
                     pygame.draw.polygon(self.screen, self.bots[i].colour,
                                         [(bee.position.x * self.cell_size + self.x_plus + 1,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                          (
+                                                      Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
                                          (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
                                           (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + 1),
                                          (bee.position.x * self.cell_size + self.x_plus + self.cell_size - 1,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
+                                          (
+                                                      Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.half_cell),
                                          (bee.position.x * self.cell_size + self.x_plus + self.half_cell,
-                                          (Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
+                                          (
+                                                      Y_SIZE - 1) * self.cell_size - bee.position.y * self.cell_size + self.cell_size - 1)])
 
             i = i + 1
 
@@ -163,7 +175,7 @@ class Game:
         if self.game_ended:
             text = big_font.render(''.join(['Turn: ', str(self.turn), '      | Game Ended |']), True, BLACK, None)
         else:
-            text = big_font.render(''.join(['Turn: ', str(self.turn)]),True, BLACK, None)
+            text = big_font.render(''.join(['Turn: ', str(self.turn)]), True, BLACK, None)
         text_rect = text.get_rect()
         text_rect.topleft = (5, 5)
 
@@ -177,13 +189,26 @@ class Game:
             pygame.draw.rect(self.screen, DEAD if killed else self.bots[i].colour,
                              (10, 5 + height, self.x_plus - 20, 2 if killed else 8))
 
-            text = big_font.render(''.join([self.bots[i].name, ': ', ''.join(['TERMINATED [', self.bots[i].terminated_reason, ']']) if self.bots[i].terminated else ('DEAD' if self.bots[i].lost else 'Active')]), True, DEAD if killed else self.bots[i].colour, None)
+            big_font.set_bold(True)
+            text = big_font.render(self.bots[i].team + ' | ', True, DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topleft = (5, 15 + height)
+            big_font.set_bold(False)
 
             self.screen.blit(text, text_rect)
 
-            text = big_font.render(''.join([str(self.bots[i].points), ' | ', str(self.bots[i].position), get_position_suffix(self.bots[i].position)]), True, DEAD if killed else self.bots[i].colour, None)
+            text = big_font.render(''.join([self.bots[i].name, ': ',
+                                            ''.join(['TERMINATED [', self.bots[i].terminated_reason, ']']) if self.bots[
+                                                i].terminated else ('DEAD' if self.bots[i].lost else 'Active')]), True,
+                                   DEAD if killed else self.bots[i].colour, None)
+            text_rect_two = text.get_rect()
+            text_rect_two.topleft = (text_rect.width + 5, 15 + height)
+
+            self.screen.blit(text, text_rect_two)
+
+            text = big_font.render(''.join([str(self.bots[i].points), ' | ', str(self.bots[i].position),
+                                            get_position_suffix(self.bots[i].position)]), True,
+                                   DEAD if killed else self.bots[i].colour, None)
             text_rect = text.get_rect()
             text_rect.topright = (self.x_plus - 5, 15 + height)
 
@@ -198,9 +223,10 @@ class Game:
                 self.screen.blit(text, text_rect)
 
                 if self.bots[i].timeouts != 5:
-                    text = font.render(''.join(['Time outs: ', str(5 - self.bots[i].timeouts)]), True, self.bots[i].colour, None)
+                    text = font.render(''.join(['Time outs: ', str(5 - self.bots[i].timeouts)]), True,
+                                       self.bots[i].colour, None)
                     text_rect = text.get_rect()
-                    text_rect.topright = (self.x_plus -5, 45 + height)
+                    text_rect.topright = (self.x_plus - 5, 45 + height)
 
                     self.screen.blit(text, text_rect)
 
@@ -223,11 +249,19 @@ class Game:
 
         position = len(self.rankings)
         for bot in self.rankings:
-            text = font.render(''.join([str(position), ': ', bot.name, ' | ', str(bot.points)]), True, bot.colour, None)
+            font.set_bold(True)
+            text = font.render(''.join([str(position), ': ', bot.team, ' | ']), True, bot.colour, None)
             text_rect = text.get_rect()
-            text_rect.bottomleft = (10, height - 10)
+            text_rect.bottomleft = (5, height - 10)
+            font.set_bold(False)
 
             self.screen.blit(text, text_rect)
+
+            text = font.render(''.join([bot.name, ' | ', str(bot.points)]), True, bot.colour, None)
+            text_rect_two = text.get_rect()
+            text_rect_two.bottomleft = (text_rect.width + 5, height - 10)
+
+            self.screen.blit(text, text_rect_two)
 
             position -= 1
             height -= 40
@@ -246,7 +280,7 @@ class Game:
             y = int(split[1])
             bee.action = ''
 
-            if self.world.manhattan(bee.position, (x,y)) <= BEE_RANGE:
+            if self.world.manhattan(bee.position, (x, y)) <= BEE_RANGE:
                 tile = self.world.get_tile(x, y)
                 if tile.bee:
                     tile.bee.health = tile.bee.health - 1
@@ -325,7 +359,8 @@ class Game:
 
                         if len(self.bots[tile.hive_index].hives) == 0:
                             print(''.join(['Turn ', str(self.turn), ': Bot index [', str(tile.hive_index), '] '
-                                  '(', self.bots[tile.hive_index].name, ') lost all hives, they are eliminated.']))
+                                                                                                           '(',
+                                           self.bots[tile.hive_index].name, ') lost all hives, they are eliminated.']))
 
                             for kill_bee in self.bots[tile.hive_index].bees:
                                 self.bee_changes.append((None, kill_bee.position.x, kill_bee.position.y))
@@ -379,13 +414,13 @@ class Game:
 
         highest = max([len(bot.bees) for bot in self.bots])
         if highest < 80:
-            if self.turn & 7 == 0:      # if turn % 8 == 0
+            if self.turn & 7 == 0:  # if turn % 8 == 0
                 self.place_food()
         elif highest < 140:
-            if self.turn & 15 == 0:     # if turn % 16 == 0
+            if self.turn & 15 == 0:  # if turn % 16 == 0
                 self.place_food()
         elif highest < 200:
-            if self.turn & 31 == 0:     # if turn % 32 == 0
+            if self.turn & 31 == 0:  # if turn % 32 == 0
                 self.place_food()
 
         if self.turn % 5 == 0 and self.turn != 0:  # if turn % 32 == 0
@@ -401,18 +436,20 @@ class Game:
             if not self.bots[i].terminated and not self.bots[i].lost:
                 try:
                     with timeout_limit():
-                        self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy(), self.eliminated_changes.copy())
-                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees], self.get_enemy_list(i), self.turn)
+                        self.bots[i].ai.update_tiles(self.food_changes.copy(), self.bee_changes.copy(),
+                                                     self.eliminated_changes.copy())
+                        data_actions = self.bots[i].ai.do_turn([bee.copy() for bee in self.bots[i].bees],
+                                                               self.get_enemy_list(i), self.turn)
                         for d_a, j in zip(data_actions, range(len(self.bots[i].bees))):
                             self.bots[i].bees[j].data = d_a[0]
                             self.bots[i].bees[j].action = d_a[1]
                 except TimeoutException as e:
-                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name, ') exceeded timelimit, no actions taken.']))
+                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name,
+                                   ') exceeded timelimit, no actions taken.']))
                     self.bots[i].timeouts -= 1
                     if self.bots[i].timeouts == 0:
                         print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name,
                                        ') timed out to many times. Terminating it.']))
-
 
                         any_terminations = True
                         self.bots[i].terminated = True
@@ -431,7 +468,8 @@ class Game:
                         self.bots[i].position = self.death_position
                         self.death_position -= 1
                 except Exception:
-                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name, ') did a naughty. Terminating it.']))
+                    print(''.join(['Turn ', str(self.turn), ': Bot index [', str(i), '] (', self.bots[i].name,
+                                   ') did a naughty. Terminating it.']))
                     print(" > Naughty details:", traceback.format_exc())
 
                     any_terminations = True
@@ -459,11 +497,14 @@ class Game:
                 if not self.bots[i].terminated and not self.bots[i].lost:
                     try:
                         with timeout_limit(TIMEOUT / 5):
-                            self.bots[i].ai.update_tiles([].copy(), terminated_bee_changes.copy(), terminated_hive_changes.copy())
+                            self.bots[i].ai.update_tiles([].copy(), terminated_bee_changes.copy(),
+                                                         terminated_hive_changes.copy())
                     except TimeoutException as e:
-                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name, ') exceeded timelimit, no actions taken.']))
+                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name,
+                                       ') exceeded timelimit, no actions taken.']))
                     except Exception:
-                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name, ') did a naughty. Terminating it.']))
+                        print(''.join(['Turn ', str(self.turn), '.5: Bot index [', str(i), '] (', self.bots[i].name,
+                                       ') did a naughty. Terminating it.']))
                         print(" > Naughty details:", traceback.format_exc())
 
                         any_terminations = True
@@ -522,7 +563,7 @@ class Game:
         i = 0
         while i < bot_length:
             if not self.bots[i].terminated and not self.bots[i].lost:
-                self.check_bee_food(self.bots[i].bees) #check bee food also resets action
+                self.check_bee_food(self.bots[i].bees)  # check bee food also resets action
             i = i + 1
 
         i = 0
@@ -559,7 +600,7 @@ class Game:
         x = random.randint(0, X_GRID_SIZE - 1)
         y = random.randint(0, Y_GRID_SIZE - 1)
         while 1:
-            tile = self.world.get_tile(x,y)
+            tile = self.world.get_tile(x, y)
             if tile.walkable and not tile.was_hive:
                 if skips == 0:
                     break
@@ -618,6 +659,7 @@ class Game:
         else:
             self.render_winner()
 
+
 def get_position_suffix(pos):
     if pos == 1:
         return 'st'
@@ -627,12 +669,14 @@ def get_position_suffix(pos):
         return 'rd'
     return 'th'
 
+
 def get_dir_x(dir):
     if dir == 'E':
         return 1
     if dir == 'W':
         return -1
     return 0
+
 
 def get_dir_y(dir):
     if dir == 'N':
@@ -641,14 +685,15 @@ def get_dir_y(dir):
         return -1
     return 0
 
+
 def create_grid(w, h):
     grid_partial_pattern = [[2, 1, 3, 3, 0, 3, 3, 3, 3, 0, 1, 2],
                             [1, 2, 1, 3, 0, 2, 2, 1, 1, 2, 2, 1],
                             [3, 1, 2, 2, 2, 1, 0, 2, 2, 1, 1, 3],
                             [3, 3, 1, 1, 2, 1, 3, 0, 2, 3, 3, 3],
                             [0, 3, 3, 3, 1, 2, 0, 3, 2, 2, 1, 3],
-                            [0, 2, 2, 3, 3, 2, 1, 3, 1,'A',2, 3],
-                            [3, 2,'B',1, 3, 1, 2, 3, 3, 2, 2, 0],
+                            [0, 2, 2, 3, 3, 2, 1, 3, 1, 'A', 2, 3],
+                            [3, 2, 'B', 1, 3, 1, 2, 3, 3, 2, 2, 0],
                             [3, 1, 2, 2, 3, 0, 2, 1, 3, 3, 3, 0],
                             [3, 3, 3, 2, 0, 3, 1, 2, 1, 1, 3, 3],
                             [3, 1, 1, 2, 2, 0, 1, 2, 2, 2, 1, 3],
@@ -809,9 +854,10 @@ def randomize_grid(grid_template, w, h):
 
 def get_bots():
     # a list of all the possible colours of the bots
-    colours = [(255,180,255), (0,117,220), (153,63,0), (50,50,60), (0,92,49), (0,255,0), (255,255,255), (128,128,128),
-               (148,255,141), (113,94,0), (183,224,10), (194,0,136), (0,51,128), (203,121,5), (255,0,16),
-               (112,255,255), (0,153,143), (255,255,0), (116,10,255), (90,0,0)]
+    colours = [(255, 180, 255), (0, 117, 220), (153, 63, 0), (50, 50, 60), (0, 92, 49), (0, 255, 0), (255, 255, 255),
+               (128, 128, 128),
+               (148, 255, 141), (113, 94, 0), (183, 224, 10), (194, 0, 136), (0, 51, 128), (203, 121, 5), (255, 0, 16),
+               (112, 255, 255), (0, 153, 143), (255, 255, 0), (116, 10, 255), (90, 0, 0)]
     random.shuffle(colours)
 
     bot_path = './bots'
@@ -843,14 +889,16 @@ def get_bots():
                             break
                     index = line.find('import')
                     if index == 0:
-                        if not (line[index + 7:] == 'random' or line[index + 7:] == 'math' or line[index + 7:] == 'itertools'):
+                        if not (line[index + 7:] == 'random' or line[index + 7:] == 'math' or line[
+                                                                                              index + 7:] == 'itertools'):
                             clean = 2
                             break
-                        
+
                     if '(open(' in line or '=open(' in line or ' open(' in line:
                         clean = 3
                         break
-                    index = max(line.find('\topen'), line.find('\nopen'), line.find(' open'), line.find('=open'), line.find('(open'))
+                    index = max(line.find('\topen'), line.find('\nopen'), line.find(' open'), line.find('=open'),
+                                line.find('(open'))
                     if index != -1:
                         index += 5
                         while index < len(line):
@@ -862,21 +910,24 @@ def get_bots():
                             index = index + 1
                     if clean == 3:
                         break
-                    
+
                     if '__import__' in line:
                         clean = 2
                         break
 
             if clean == 1:
-                bot_ai = importlib.import_module('bots.' + bot_names[i]).AI(i)
+                bot_ai = importlib.import_module('bots.' + bot_names[i])
                 # creates all the bots and appends it to the bot array
-                bots.append(Bot(bot_names[i][:min(16, len(bot_names[i]))], bot_ai, colours.pop(0)))
+                bots.append(Bot(bot_names[i][:min(16, len(bot_names[i]))], bot_ai.TEAM, bot_ai.AI(i), colours.pop(0)))
                 # each bot name is limited to only 16 characters
             else:
                 if clean == 2:
-                    print('Start: Bot (' + bot_names[i] + ') had illegal imports, it is not being included. Unclean line: ' + str(unclean_index))
+                    print('Start: Bot (' + bot_names[
+                        i] + ') had illegal imports, it is not being included. Unclean line: ' + str(unclean_index))
                 else:
-                    print('Start: Bot (' + bot_names[i] + ') attempted to open a file, it is not being included. Unclean line: ' + str(unclean_index))
+                    print('Start: Bot (' + bot_names[
+                        i] + ') attempted to open a file, it is not being included. Unclean line: ' + str(
+                        unclean_index))
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())
@@ -886,14 +937,28 @@ def get_bots():
     return bots
 
 
-def main():
+def get_winner():
+    # used for getting the winners for the database
+    if game is not None:
+        if game.rankings is not None:
+            return [game.rankings[len(game.rankings) - i - 1].team for i in range(len(game.rankings))]
+    return None
+
+
+# run the main function only if this module is executed as the main script
+# (if you import this as a module then nothing is executed)
+game = None
+if __name__ == "__main__":
+    X_SIZE *= X_GRIDS
+    Y_SIZE *= Y_GRIDS
+
     pygame.init()
     pygame.display.set_caption("CTF: Bee Swarm Battle")
 
     # creates the game
     game = Game(X_SIZE, Y_SIZE)
 
-    while 1: # While True: (but while 1 is technically slightly faster)
+    while 1:  # While True: (but while 1 is technically slightly faster)
         game.update()
 
         pygame.display.update()
@@ -903,11 +968,3 @@ def main():
                 sys.exit()
             if event.type == pygame.VIDEORESIZE:
                 game.resize_board(event.w, event.h)
-
-
-# run the main function only if this module is executed as the main script
-# (if you import this as a module then nothing is executed)
-if __name__ == "__main__":
-    X_SIZE *= X_GRIDS
-    Y_SIZE *= Y_GRIDS
-    main()

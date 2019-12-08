@@ -1,6 +1,6 @@
 # Defend or Wander bot
 # Written by Hacker-man Mann
-# Member of team: m0r3_1337
+TEAM = 'm0r3_1337'  # VERY IMPORTANT YOU ADD THIS
 
 # THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random

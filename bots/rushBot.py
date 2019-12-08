@@ -1,6 +1,6 @@
 # Rusher Bot
 # Written by Chad McCool
-# Member of team: h4x0rz
+TEAM = 'h4x0rz'  # VERY IMPORTANT YOU ADD THIS
 
 # THESE ARE ALL THE IMPORTS ALLOWED, IMPORTING MORE WILL GET YOUR BOT REMOVED ***DO NOT TOUCH THESE***
 import random
