@@ -948,23 +948,22 @@ def get_winner():
 # run the main function only if this module is executed as the main script
 # (if you import this as a module then nothing is executed)
 game = None
-if __name__ == "__main__":
-    X_SIZE *= X_GRIDS
-    Y_SIZE *= Y_GRIDS
+X_SIZE *= X_GRIDS
+Y_SIZE *= Y_GRIDS
 
-    pygame.init()
-    pygame.display.set_caption("CTF: Bee Swarm Battle")
+pygame.init()
+pygame.display.set_caption("CTF: Bee Swarm Battle")
 
-    # creates the game
-    game = Game(X_SIZE, Y_SIZE)
+# creates the game
+game = Game(X_SIZE, Y_SIZE)
 
-    while 1:  # While True: (but while 1 is technically slightly faster)
-        game.update()
+while 1:  # While True: (but while 1 is technically slightly faster)
+    game.update()
 
-        pygame.display.update()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.VIDEORESIZE:
-                game.resize_board(event.w, event.h)
+    pygame.display.update()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.VIDEORESIZE:
+            game.resize_board(event.w, event.h)
