@@ -77,8 +77,8 @@ class Game:
         self.bots = get_bots()
         self.world.tiles = self.set_hives(w, h, self.world.tiles)
         self.world.generate_neighbors()
-        self.resize_board(math.floor(600 * max(X_SIZE / Y_SIZE, 1)) + 350, math.floor(600 * max(Y_SIZE / X_SIZE, 1)))
-
+        self.resize_board(math.floor(700 * max(X_SIZE / Y_SIZE, 1)) + 450, math.floor(700 * max(Y_SIZE / X_SIZE, 1)))
+        
         self.turn = 0
         self.death_position = len(self.bots)
         self.game_ended = False
@@ -944,6 +944,9 @@ def get_winner():
             return [game.rankings[len(game.rankings) - i - 1].team for i in range(len(game.rankings))]
     return None
 
+def quit_game():
+    pygame.quit()
+    sys.exit()
 
 # run the main function only if this module is executed as the main script
 # (if you import this as a module then nothing is executed)
@@ -957,13 +960,19 @@ pygame.display.set_caption("CTF: Bee Swarm Battle")
 # creates the game
 game = Game(X_SIZE, Y_SIZE)
 
-while 1:  # While True: (but while 1 is technically slightly faster)
+def loop():
     game.update()
 
     pygame.display.update()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+            quit_game()
         if event.type == pygame.VIDEORESIZE:
             game.resize_board(event.w, event.h)
+
+
+if __name__ == '__main__':
+    while 1: 
+        loop()
+
+
