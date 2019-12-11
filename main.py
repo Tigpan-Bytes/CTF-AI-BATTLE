@@ -246,6 +246,18 @@ class Game:
             else:
                 self.rankings.sort(key=get_position)
             self.rankings = self.rankings[min(2, len(self.rankings) - 1)::-1]
+            try:
+                import pyperclip
+                query = ""
+                if len(self.rankings) == 3:
+                    query = "UPDATE teams SET score=score+50, bsb1=bsb1+1 WHERE teamname='" + self.rankings[2].team + "';"
+                if len(self.rankings) >= 2:
+                    query += "UPDATE teams SET score=score+40, bsb2=bsb2+1 WHERE teamname='" + self.rankings[1].team + "';"
+                if len(self.rankings) >= 1:
+                    query += "UPDATE teams SET score=score+30, bsb3=bsb3+1 WHERE teamname='" + self.rankings[0].team + "';"
+                pyperclip.copy(query)
+            except: 
+                pass
 
         position = len(self.rankings)
         for bot in self.rankings:
@@ -922,12 +934,9 @@ def get_bots():
                 # each bot name is limited to only 16 characters
             else:
                 if clean == 2:
-                    print('Start: Bot (' + bot_names[
-                        i] + ') had illegal imports, it is not being included. Unclean line: ' + str(unclean_index))
+                    print('Start: Bot (' + bot_names[i] + ') had illegal imports, it is not being included. Unclean line: ' + str(unclean_index))
                 else:
-                    print('Start: Bot (' + bot_names[
-                        i] + ') attempted to open a file, it is not being included. Unclean line: ' + str(
-                        unclean_index))
+                    print('Start: Bot (' + bot_names[i] + ') attempted to open a file, it is not being included. Unclean line: ' + str(unclean_index))
         except Exception:
             print('Start: Bot (' + bot_names[i] + ') did a naughty during creation. Not including it.')
             print(" > Naughty details:", traceback.format_exc())
