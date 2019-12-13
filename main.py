@@ -250,11 +250,11 @@ class Game:
                 import pyperclip
                 query = ""
                 if len(self.rankings) == 3:
-                    query = "UPDATE teams SET score=score+50, bsb1=bsb1+1 WHERE teamname='" + self.rankings[2].team + "';"
+                    query = "UPDATE teams SET score=score+100, bsb1=bsb1+1 WHERE teamname='" + self.rankings[2].team + "';"
                 if len(self.rankings) >= 2:
-                    query += "UPDATE teams SET score=score+40, bsb2=bsb2+1 WHERE teamname='" + self.rankings[1].team + "';"
+                    query += "UPDATE teams SET score=score+75, bsb2=bsb2+1 WHERE teamname='" + self.rankings[1].team + "';"
                 if len(self.rankings) >= 1:
-                    query += "UPDATE teams SET score=score+30, bsb3=bsb3+1 WHERE teamname='" + self.rankings[0].team + "';"
+                    query += "UPDATE teams SET score=score+50, bsb3=bsb3+1 WHERE teamname='" + self.rankings[0].team + "';"
                 pyperclip.copy(query)
             except: 
                 pass
