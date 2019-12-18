@@ -1,7 +1,7 @@
 import random
 import math
 from class_data import *
-
+TEAM='eee'
 
 def get_rand_xy():
     val = random.randint(0, 3)

@@ -1,6 +1,7 @@
 import random
 import math
 from class_data import *
+TEAM='eee'
 
 
 def get_state_xy(state):
