@@ -44,6 +44,7 @@ BEE_RANGE = 3
 X_GRID_SIZE = X_SIZE
 Y_GRID_SIZE = Y_SIZE
 
+HOST = False
 
 class TimeoutException(Exception): pass
 
@@ -246,18 +247,19 @@ class Game:
             else:
                 self.rankings.sort(key=get_position)
             self.rankings = self.rankings[min(2, len(self.rankings) - 1)::-1]
-            try:
-                import pyperclip
-                query = ""
-                if len(self.rankings) == 3:
-                    query = "UPDATE teams SET score=score+200, bsb1=bsb1+1 WHERE teamname='" + self.rankings[2].team + "';"
-                if len(self.rankings) >= 2:
-                    query += "UPDATE teams SET score=score+125, bsb2=bsb2+1 WHERE teamname='" + self.rankings[1].team + "';"
-                if len(self.rankings) >= 1:
-                    query += "UPDATE teams SET score=score+50, bsb3=bsb3+1 WHERE teamname='" + self.rankings[0].team + "';"
-                pyperclip.copy(query)
-            except: 
-                pass
+            if HOST:
+                try:
+                    import pyperclip
+                    query = ""
+                    if len(self.rankings) == 3:
+                        query = "UPDATE teams SET score=score+200, bsb1=bsb1+1 WHERE teamname='" + self.rankings[2].team + "';"
+                    if len(self.rankings) >= 2:
+                        query += "UPDATE teams SET score=score+125, bsb2=bsb2+1 WHERE teamname='" + self.rankings[1].team + "';"
+                    if len(self.rankings) >= 1:
+                        query += "UPDATE teams SET score=score+50, bsb3=bsb3+1 WHERE teamname='" + self.rankings[0].team + "';"
+                    pyperclip.copy(query)
+                except: 
+                    pass
 
         position = len(self.rankings)
         for bot in self.rankings:
